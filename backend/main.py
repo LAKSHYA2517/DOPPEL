@@ -1,16 +1,21 @@
-from fastapi import FastAPI, Depends, HTTPException, status
+from fastapi import FastAPI, Depends, HTTPException, status, File, UploadFile, Form
+from fastapi.responses import Response
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.security import OAuth2PasswordRequestForm
 from pydantic import BaseModel
 from datetime import datetime
+from typing import Optional
 import re
 from sqlalchemy import text
 from sqlalchemy.orm import Session
 from database import engine, get_db, Base, SessionLocal
-from models import User, DailyMetrics, Goal, ScheduleItem, AgentAction, GitHubAccount, LeetCodeAccount
+from models import User, DailyMetrics, Goal, ScheduleItem, AgentAction, GitHubAccount, LeetCodeAccount, Syllabus, GeneratedSchedule, ScheduleTask
 from auth import authenticate_user, create_access_token, get_current_user, get_current_user_optional, get_password_hash, GUEST_USER_EMAIL
-from services.github_service import sync_github_data
-from services.leetcode_service import sync_leetcode_data
+from services.github_service import sync_github_data, get_github_commits
+from services.leetcode_service import sync_leetcode_data, get_recent_ac_submissions
+from services.ssv_service import build_ssv
+from services.gemini_service import generate_schedule
+import json
 
 # Create database tables
 Base.metadata.create_all(bind=engine)
@@ -30,6 +35,7 @@ def ensure_account_columns():
     add_column_if_missing("github_accounts", "password VARCHAR")
     add_column_if_missing("leetcode_accounts", "email VARCHAR")
     add_column_if_missing("leetcode_accounts", "password VARCHAR")
+    add_column_if_missing("daily_metrics", "leetcode_streak_days INTEGER DEFAULT 0")
 
 
 ensure_account_columns()
@@ -94,6 +100,11 @@ class LeetCodeConnect(BaseModel):
 class JournalData(BaseModel):
     text: str
 
+class SyllabusCreate(BaseModel):
+    title: str
+    content: str
+    deadline: str  # ISO format date string
+
 DEFAULT_TWIN_STATE = {
     "profile": {
         "name": "Guest Learner",
@@ -102,6 +113,7 @@ DEFAULT_TWIN_STATE = {
     },
     "metrics": {
         "coding_streak_days": 0,
+        "leetcode_streak_days": 0,
         "focus_score": 65,
         "current_stress_score": 5.0,
         "sleep_deficit_hours": 2.0
@@ -249,6 +261,7 @@ def get_account_status(db: Session = Depends(get_db)):
         },
         "metrics": {
             "coding_streak_days": metrics.coding_streak_days if metrics else 0,
+            "leetcode_streak_days": metrics.leetcode_streak_days if metrics else 0,
             "focus_score": metrics.focus_score if metrics else 0,
             "last_updated": metrics.date.isoformat() if metrics else None
         }
@@ -353,3 +366,378 @@ def process_journal(data: JournalData, db: Session = Depends(get_db)):
     db.commit()
 
     return {"message": "Journal processed"}
+
+# --- Syllabus Endpoints ---
+
+@app.post("/api/syllabus")
+def create_syllabus(data: SyllabusCreate, db: Session = Depends(get_db)):
+    """Create a syllabus from text input."""
+    GUEST_EMAIL = "guest@twinagent.local"
+    guest = db.query(User).filter(User.email == GUEST_EMAIL).first()
+    if not guest:
+        raise HTTPException(status_code=500, detail="Guest user not found")
+
+    try:
+        deadline_dt = datetime.fromisoformat(data.deadline)
+    except ValueError:
+        raise HTTPException(status_code=400, detail="Invalid deadline format. Use ISO format (YYYY-MM-DD).")
+
+    syllabus = Syllabus(
+        user_id=guest.id,
+        title=data.title,
+        content=data.content,
+        deadline=deadline_dt,
+    )
+    db.add(syllabus)
+    db.commit()
+    db.refresh(syllabus)
+    return {"message": "Syllabus created", "id": syllabus.id}
+
+
+@app.post("/api/syllabus/upload")
+async def upload_syllabus(
+    title: str = Form(...),
+    deadline: str = Form(...),
+    file: UploadFile = File(...),
+    db: Session = Depends(get_db),
+):
+    """Create a syllabus from a PDF upload."""
+    GUEST_EMAIL = "guest@twinagent.local"
+    guest = db.query(User).filter(User.email == GUEST_EMAIL).first()
+    if not guest:
+        raise HTTPException(status_code=500, detail="Guest user not found")
+
+    if not file.filename.lower().endswith(".pdf"):
+        raise HTTPException(status_code=400, detail="Only PDF files are accepted.")
+
+    try:
+        deadline_dt = datetime.fromisoformat(deadline)
+    except ValueError:
+        raise HTTPException(status_code=400, detail="Invalid deadline format. Use ISO format (YYYY-MM-DD).")
+
+    pdf_bytes = await file.read()
+
+    syllabus = Syllabus(
+        user_id=guest.id,
+        title=title,
+        pdf_filename=file.filename,
+        pdf_data=pdf_bytes,
+        deadline=deadline_dt,
+    )
+    db.add(syllabus)
+    db.commit()
+    db.refresh(syllabus)
+    return {"message": "Syllabus uploaded", "id": syllabus.id}
+
+
+@app.get("/api/syllabus")
+def list_syllabi(db: Session = Depends(get_db)):
+    """List all syllabi for the guest user."""
+    GUEST_EMAIL = "guest@twinagent.local"
+    guest = db.query(User).filter(User.email == GUEST_EMAIL).first()
+    if not guest:
+        return []
+
+    syllabi = db.query(Syllabus).filter(Syllabus.user_id == guest.id).order_by(Syllabus.created_at.desc()).all()
+    return [
+        {
+            "id": s.id,
+            "title": s.title,
+            "content": s.content[:200] if s.content else None,
+            "has_pdf": bool(s.pdf_data),
+            "pdf_filename": s.pdf_filename,
+            "deadline": s.deadline.isoformat() if s.deadline else None,
+            "created_at": s.created_at.isoformat() if s.created_at else None,
+        }
+        for s in syllabi
+    ]
+
+
+@app.get("/api/syllabus/{syllabus_id}/pdf")
+def download_syllabus_pdf(syllabus_id: int, db: Session = Depends(get_db)):
+    """Download the PDF for a syllabus entry."""
+    syllabus = db.query(Syllabus).filter(Syllabus.id == syllabus_id).first()
+    if not syllabus or not syllabus.pdf_data:
+        raise HTTPException(status_code=404, detail="PDF not found")
+
+    return Response(
+        content=syllabus.pdf_data,
+        media_type="application/pdf",
+        headers={"Content-Disposition": f'attachment; filename="{syllabus.pdf_filename or "syllabus.pdf"}"'},
+    )
+
+
+@app.delete("/api/syllabus/{syllabus_id}")
+def delete_syllabus(syllabus_id: int, db: Session = Depends(get_db)):
+    """Delete a syllabus entry."""
+    syllabus = db.query(Syllabus).filter(Syllabus.id == syllabus_id).first()
+    if not syllabus:
+        raise HTTPException(status_code=404, detail="Syllabus not found")
+
+    db.delete(syllabus)
+    db.commit()
+    return {"message": "Syllabus deleted"}
+
+
+# --- Schedule Generation & Management Endpoints ---
+
+def _get_guest(db: Session):
+    """Helper to get guest user."""
+    GUEST_EMAIL = "guest@twinagent.local"
+    guest = db.query(User).filter(User.email == GUEST_EMAIL).first()
+    if not guest:
+        raise HTTPException(status_code=500, detail="Guest user not found")
+    return guest
+
+
+@app.post("/api/schedule/generate")
+def generate_schedule_endpoint(db: Session = Depends(get_db)):
+    """Build SSV, call Gemini, store schedule in DB."""
+    guest = _get_guest(db)
+
+    # Check that at least one syllabus exists
+    syllabi = db.query(Syllabus).filter(Syllabus.user_id == guest.id).all()
+    if not syllabi:
+        raise HTTPException(status_code=400, detail="Add at least one syllabus before generating a schedule.")
+
+    # Build SSV
+    print("\n[Schedule] Building SSV...", flush=True)
+    ssv = build_ssv(db, guest.id)
+
+    # Call Gemini
+    print("[Schedule] Calling Gemini...", flush=True)
+    try:
+        tasks_data = generate_schedule(ssv)
+    except ValueError as e:
+        raise HTTPException(status_code=500, detail=str(e))
+    except Exception as e:
+        print(f"[Schedule] Gemini error: {e}", flush=True)
+        raise HTTPException(status_code=500, detail=f"Gemini API error: {str(e)}")
+
+    # Delete existing schedule
+    old_schedules = db.query(GeneratedSchedule).filter(GeneratedSchedule.user_id == guest.id).all()
+    for old in old_schedules:
+        db.delete(old)
+    db.flush()
+
+    # Store new schedule
+    gen_schedule = GeneratedSchedule(
+        user_id=guest.id,
+        ssv_snapshot=json.dumps(ssv),
+        gemini_raw_response=json.dumps(tasks_data),
+    )
+    db.add(gen_schedule)
+    db.flush()
+
+    for i, task_data in enumerate(tasks_data):
+        task = ScheduleTask(
+            schedule_id=gen_schedule.id,
+            user_id=guest.id,
+            date=task_data.get("date", ssv["today"]),
+            time=task_data.get("time", ""),
+            task=task_data.get("task", "Untitled task"),
+            type=task_data.get("type", "Academic"),
+            status="pending",
+            verification_type=task_data.get("verification_type", "manual"),
+            verification_data=task_data.get("verification_data"),
+            order=task_data.get("order", i),
+        )
+        db.add(task)
+
+    db.commit()
+    print(f"[Schedule] Stored {len(tasks_data)} tasks", flush=True)
+
+    return {"message": f"Schedule generated with {len(tasks_data)} tasks", "task_count": len(tasks_data)}
+
+
+@app.get("/api/schedule")
+def get_schedule(db: Session = Depends(get_db)):
+    """Get the current schedule grouped by date."""
+    guest = _get_guest(db)
+
+    tasks = db.query(ScheduleTask).filter(
+        ScheduleTask.user_id == guest.id
+    ).order_by(ScheduleTask.date, ScheduleTask.order).all()
+
+    # Group by date
+    schedule = {}
+    for t in tasks:
+        if t.date not in schedule:
+            schedule[t.date] = []
+        schedule[t.date].append({
+            "id": t.id,
+            "time": t.time,
+            "task": t.task,
+            "type": t.type,
+            "status": t.status,
+            "verification_type": t.verification_type,
+            "verification_data": t.verification_data,
+            "order": t.order,
+        })
+
+    # Sort dates
+    sorted_schedule = []
+    for date_str in sorted(schedule.keys()):
+        sorted_schedule.append({
+            "date": date_str,
+            "tasks": schedule[date_str],
+        })
+
+    return {"schedule": sorted_schedule}
+
+
+@app.patch("/api/schedule/task/{task_id}/toggle")
+def toggle_task(task_id: int, db: Session = Depends(get_db)):
+    """Toggle a task between pending and completed (manual tasks only)."""
+    task = db.query(ScheduleTask).filter(ScheduleTask.id == task_id).first()
+    if not task:
+        raise HTTPException(status_code=404, detail="Task not found")
+
+    if task.status in ["pending", "missed"]:
+        task.status = "completed"
+    elif task.status == "completed":
+        task.status = "pending"
+    # auto_verified stays as-is
+
+    db.commit()
+    return {"message": f"Task toggled to {task.status}", "status": task.status}
+
+
+@app.post("/api/schedule/verify")
+def verify_tasks(db: Session = Depends(get_db)):
+    """Auto-verify LeetCode and GitHub tasks by checking APIs."""
+    guest = _get_guest(db)
+    today_str = datetime.now().strftime("%Y-%m-%d")
+
+    # Mark past pending tasks as missed
+    past_pending = db.query(ScheduleTask).filter(
+        ScheduleTask.user_id == guest.id,
+        ScheduleTask.date < today_str,
+        ScheduleTask.status == "pending",
+    ).all()
+    for t in past_pending:
+        t.status = "missed"
+    if past_pending:
+        print(f"[Verify] Marked {len(past_pending)} past tasks as missed", flush=True)
+
+    verified_count = 0
+
+    # --- Verify LeetCode tasks ---
+    leetcode_account = db.query(LeetCodeAccount).filter(LeetCodeAccount.user_id == guest.id).first()
+    if leetcode_account and leetcode_account.username:
+        submissions = get_recent_ac_submissions(leetcode_account.username)
+        solved_titles = [t.lower() for t in submissions.get("titles", [])]
+        solved_slugs = [s.lower() for s in submissions.get("slugs", [])]
+
+        lc_tasks = db.query(ScheduleTask).filter(
+            ScheduleTask.user_id == guest.id,
+            ScheduleTask.verification_type == "leetcode",
+            ScheduleTask.status.in_(["pending", "missed"]),
+        ).all()
+
+        for task in lc_tasks:
+            vdata = (task.verification_data or "").lower()
+            if vdata and (vdata in solved_titles or vdata in solved_slugs
+                         or any(vdata in t for t in solved_titles)
+                         or any(vdata in s for s in solved_slugs)):
+                task.status = "auto_verified"
+                verified_count += 1
+                print(f"[Verify] LeetCode task auto-verified: {task.task}", flush=True)
+
+    # --- Verify GitHub tasks ---
+    github_account = db.query(GitHubAccount).filter(GitHubAccount.user_id == guest.id).first()
+    if github_account and github_account.username:
+        commits = get_github_commits(github_account.access_token, github_account.username, days=1)
+        has_recent_commit = commits and commits[0] > 0
+
+        if has_recent_commit:
+            gh_tasks = db.query(ScheduleTask).filter(
+                ScheduleTask.user_id == guest.id,
+                ScheduleTask.verification_type == "github",
+                ScheduleTask.date == today_str,
+                ScheduleTask.status.in_(["pending", "missed"]),
+            ).all()
+            for task in gh_tasks:
+                task.status = "auto_verified"
+                verified_count += 1
+                print(f"[Verify] GitHub task auto-verified: {task.task}", flush=True)
+
+    db.commit()
+    return {"message": f"Verification complete. {verified_count} tasks auto-verified.", "verified": verified_count}
+
+
+@app.post("/api/schedule/adjust")
+def adjust_schedule(db: Session = Depends(get_db)):
+    """Check for missed tasks and regenerate the remaining schedule."""
+    guest = _get_guest(db)
+    today_str = datetime.now().strftime("%Y-%m-%d")
+
+    # Mark past pending as missed
+    past_pending = db.query(ScheduleTask).filter(
+        ScheduleTask.user_id == guest.id,
+        ScheduleTask.date < today_str,
+        ScheduleTask.status == "pending",
+    ).all()
+    for t in past_pending:
+        t.status = "missed"
+    db.commit()
+
+    # Check if there are missed tasks that need adjustment
+    missed_count = db.query(ScheduleTask).filter(
+        ScheduleTask.user_id == guest.id,
+        ScheduleTask.status == "missed",
+    ).count()
+
+    if missed_count == 0:
+        return {"message": "No adjustment needed. All tasks on track."}
+
+    # Rebuild SSV (which includes incomplete tasks) and regenerate
+    ssv = build_ssv(db, guest.id)
+
+    try:
+        tasks_data = generate_schedule(ssv)
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Schedule adjustment failed: {str(e)}")
+
+    # Delete only future tasks (keep completed/verified history)
+    future_pending = db.query(ScheduleTask).filter(
+        ScheduleTask.user_id == guest.id,
+        ScheduleTask.date >= today_str,
+        ScheduleTask.status.in_(["pending", "missed"]),
+    ).all()
+    for t in future_pending:
+        db.delete(t)
+    db.flush()
+
+    # Get or create schedule record
+    gen_schedule = db.query(GeneratedSchedule).filter(
+        GeneratedSchedule.user_id == guest.id
+    ).order_by(GeneratedSchedule.generated_at.desc()).first()
+
+    if not gen_schedule:
+        gen_schedule = GeneratedSchedule(user_id=guest.id)
+        db.add(gen_schedule)
+        db.flush()
+
+    # Store new tasks
+    new_count = 0
+    for i, task_data in enumerate(tasks_data):
+        task_date = task_data.get("date", today_str)
+        if task_date >= today_str:  # Only add future tasks
+            task = ScheduleTask(
+                schedule_id=gen_schedule.id,
+                user_id=guest.id,
+                date=task_date,
+                time=task_data.get("time", ""),
+                task=task_data.get("task", "Untitled task"),
+                type=task_data.get("type", "Academic"),
+                status="pending",
+                verification_type=task_data.get("verification_type", "manual"),
+                verification_data=task_data.get("verification_data"),
+                order=task_data.get("order", i),
+            )
+            db.add(task)
+            new_count += 1
+
+    db.commit()
+    return {"message": f"Schedule adjusted. {missed_count} missed tasks rescheduled into {new_count} new tasks."}

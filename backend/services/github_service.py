@@ -1,5 +1,5 @@
 import requests
-from datetime import datetime, timedelta
+from datetime import datetime, timedelta, timezone
 from sqlalchemy.orm import Session
 from models import GitHubAccount, DailyMetrics
 import os
@@ -21,7 +21,7 @@ def _fetch_github_events(username: str, headers: dict, days: int = 30):
 
     # Count PushEvents in the last N days
     commit_count = 0
-    cutoff = datetime.now() - timedelta(days=days)
+    cutoff = datetime.now(timezone.utc) - timedelta(days=days)
     push_events = []
 
     for event in events[:100]:  # Check last 100 events
