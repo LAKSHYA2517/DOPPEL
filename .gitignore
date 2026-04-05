@@ -36,3 +36,4 @@ desktop.ini
 # Misc
 *.log
 coverage/
+git_*.txt
