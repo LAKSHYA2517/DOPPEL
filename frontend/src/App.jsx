@@ -1,6 +1,9 @@
 import React, { useState, useEffect } from 'react';
 import axios from 'axios';
 
+// Dynamically target backend based on where it's deployed!
+axios.defaults.baseURL = import.meta.env.VITE_API_URL || 'http://localhost:8000';
+
 function App() {
   const [twinData, setTwinData] = useState(null);
   const [accountStatus, setAccountStatus] = useState(null);
@@ -42,13 +45,13 @@ function App() {
   }, []);
 
   const fetchAccountStatus = () => {
-    axios.get('http://localhost:8000/api/account/status')
+    axios.get('/api/account/status')
       .then(res => setAccountStatus(res.data))
       .catch(err => console.error('Failed to fetch account status:', err));
   };
 
   const fetchState = () => {
-    axios.get('http://localhost:8000/api/twin/state')
+    axios.get('/api/twin/state')
       .then(res => setTwinData(res.data))
       .catch(() => {
         setTwinData(null);
@@ -59,7 +62,7 @@ function App() {
   const handleApiSync = () => {
     setIsProcessing(true);
     setMessage('⏳ Syncing GitHub and LeetCode data...');
-    axios.post('http://localhost:8000/api/twin/sync_apis', {}, { timeout: 15000 })
+    axios.post('/api/twin/sync_apis', {}, { timeout: 15000 })
       .then(() => {
         setMessage('✓ Sync Completed! GitHub commits and LeetCode problems updated.');
         setIsProcessing(false);
@@ -78,7 +81,7 @@ function App() {
     e.preventDefault();
     setIsProcessing(true);
     setMessage('⏳ Processing journal entry...');
-    axios.post('http://localhost:8000/api/twin/journal', { text: journalText }, { timeout: 10000 })
+    axios.post('/api/twin/journal', { text: journalText }, { timeout: 10000 })
       .then(() => {
         setMessage('✓ Journal entry processed successfully!');
         setIsProcessing(false);
@@ -100,7 +103,7 @@ function App() {
     setMessage('');
 
     try {
-      const response = await axios.post('http://localhost:8000/api/github/connect', {
+      const response = await axios.post('/api/github/connect', {
         username: githubUsername,
         password: githubPassword
       }, { timeout: 5000 });
@@ -123,7 +126,7 @@ function App() {
     setMessage('');
 
     try {
-      const response = await axios.post('http://localhost:8000/api/leetcode/connect', {
+      const response = await axios.post('/api/leetcode/connect', {
         username: leetcodeUsername,
         password: leetcodePassword
       }, { timeout: 5000 });
@@ -142,7 +145,7 @@ function App() {
 
   // --- Syllabus Handlers ---
   const fetchSyllabi = () => {
-    axios.get('http://localhost:8000/api/syllabus')
+    axios.get('/api/syllabus')
       .then(res => setSyllabi(res.data))
       .catch(err => console.error('Failed to fetch syllabi:', err));
   };
@@ -152,7 +155,7 @@ function App() {
     setIsProcessing(true);
     setMessage('');
     try {
-      await axios.post('http://localhost:8000/api/syllabus', {
+      await axios.post('/api/syllabus', {
         title: syllabusTitle,
         content: syllabusContent,
         deadline: syllabusDeadline,
@@ -181,7 +184,7 @@ function App() {
       formData.append('title', syllabusTitle);
       formData.append('deadline', syllabusDeadline);
       formData.append('file', syllabusFile);
-      await axios.post('http://localhost:8000/api/syllabus/upload', formData, {
+      await axios.post('/api/syllabus/upload', formData, {
         headers: { 'Content-Type': 'multipart/form-data' },
         timeout: 15000,
       });
@@ -207,7 +210,7 @@ function App() {
     try {
       const formData = new FormData();
       formData.append('file', healthFile);
-      const res = await axios.post('http://localhost:8000/api/health/upload', formData, {
+      const res = await axios.post('/api/health/upload', formData, {
         headers: { 'Content-Type': 'multipart/form-data' },
         timeout: 15000,
       });
@@ -235,7 +238,7 @@ function App() {
 
   // --- Schedule Handlers ---
   const fetchSchedule = () => {
-    axios.get('http://localhost:8000/api/schedule')
+    axios.get('/api/schedule')
       .then(res => setGeneratedSchedule(res.data.schedule || []))
       .catch(err => console.error('Failed to fetch schedule:', err));
   };
@@ -244,7 +247,7 @@ function App() {
     setIsGenerating(true);
     setMessage('⏳ Generating schedule with AI... This may take 15-30 seconds.');
     try {
-      const res = await axios.post('http://localhost:8000/api/schedule/generate', {}, { timeout: 60000 });
+      const res = await axios.post('/api/schedule/generate', {}, { timeout: 60000 });
       setMessage(`✓ ${res.data.message}`);
       fetchSchedule();
     } catch (error) {
@@ -268,7 +271,7 @@ function App() {
     setIsProcessing(true);
     setMessage('⏳ Verifying tasks via LeetCode & GitHub APIs...');
     try {
-      const res = await axios.post('http://localhost:8000/api/schedule/verify', {}, { timeout: 30000 });
+      const res = await axios.post('/api/schedule/verify', {}, { timeout: 30000 });
       setMessage(`✓ ${res.data.message}`);
       fetchSchedule();
     } catch {
@@ -282,7 +285,7 @@ function App() {
     setIsGenerating(true);
     setMessage('⏳ Adjusting schedule for missed tasks...');
     try {
-      const res = await axios.post('http://localhost:8000/api/schedule/adjust', {}, { timeout: 60000 });
+      const res = await axios.post('/api/schedule/adjust', {}, { timeout: 60000 });
       setMessage(`✓ ${res.data.message}`);
       fetchSchedule();
     } catch (error) {
@@ -1367,7 +1370,7 @@ function App() {
                           <div className="flex items-center gap-2 shrink-0">
                             {s.has_pdf && (
                               <a
-                                href={`http://localhost:8000/api/syllabus/${s.id}/pdf`}
+                                href={`${axios.defaults.baseURL}/api/syllabus/${s.id}/pdf`}
                                 target="_blank"
                                 rel="noopener noreferrer"
                                 className={`px-3 py-2 rounded-lg text-xs font-bold transition-all hover:scale-105 ${
