@@ -1,4 +1,12 @@
 fastapi
 uvicorn
-python-pydantic
-dotenv
+pydantic
+python-dotenv
+sqlalchemy
+alembic
+python-jose[cryptography]
+passlib[argon2]>=1.7.4
+requests
+httpx
+python-multipart
+google-genai
