@@ -268,8 +268,39 @@ def get_account_status(db: Session = Depends(get_db)):
     }
 
 @app.get("/api/twin/state")
-def get_state():
-    return DEFAULT_TWIN_STATE
+def get_state(db: Session = Depends(get_db)):
+    GUEST_EMAIL = "guest@twinagent.local"
+    guest = db.query(User).filter(User.email == GUEST_EMAIL).first()
+    
+    # Deep copy to avoid mutating the global dictionary
+    import copy
+    state = copy.deepcopy(DEFAULT_TWIN_STATE)
+    
+    if not guest:
+        return state
+        
+    metrics = db.query(DailyMetrics).filter(DailyMetrics.user_id == guest.id).order_by(DailyMetrics.date.desc()).first()
+    if metrics:
+        state["metrics"] = {
+            "coding_streak_days": metrics.coding_streak_days,
+            "leetcode_streak_days": metrics.leetcode_streak_days,
+            "focus_score": metrics.focus_score,
+            "current_stress_score": metrics.current_stress_score,
+            "sleep_deficit_hours": metrics.sleep_deficit_hours
+        }
+        
+    goals = db.query(Goal).filter(Goal.user_id == guest.id).all()
+    if goals:
+        state["goals"] = [{"name": g.name, "progress": g.progress} for g in goals]
+        
+    actions = db.query(AgentAction).filter(AgentAction.user_id == guest.id).order_by(AgentAction.timestamp.desc()).limit(5).all()
+    if actions:
+        state["agent_status"]["history"] = [
+            {"time": a.timestamp.strftime("%I:%M %p"), "action": a.action} 
+            for a in actions
+        ]
+        
+    return state
 
 @app.post("/api/twin/sync_apis")
 def sync_apis(db: Session = Depends(get_db)):
@@ -340,25 +371,44 @@ def process_journal(data: JournalData, db: Session = Depends(get_db)):
     sleep_match = re.search(r'slept.*?(\d+)|sleep.*?(\d+)', text)
     if sleep_match:
         hours = float(sleep_match.group(1) or sleep_match.group(2))
-        metrics.sleep_deficit_hours = max(0, metrics.sleep_deficit_hours - hours)
-        extracted_actions.append(f"Extracted sleep: {hours}h")
-        
-        # Heal state if sleep is good
-        if metrics.sleep_deficit_hours < 2:
-            metrics.current_stress_score = 4.0
+        metrics.sleep_deficit_hours = hours  # Now storing raw hours!
+        if hours < 7:
+            metrics.current_stress_score = min(10.0, metrics.current_stress_score + 1.5)
+            extracted_actions.append(f"Recorded poor sleep: {hours}h")
+        else:
+            metrics.current_stress_score = max(0.0, metrics.current_stress_score - 1.0)
+            extracted_actions.append(f"Recorded good sleep: {hours}h")
 
     # Simulate extracting coding data
     if "leetcode" in text or "code" in text or "github" in text:
-        metrics.coding_streak_days += 1
+        metrics.coding_streak_days = (metrics.coding_streak_days or 0) + 1
+        metrics.leetcode_streak_days = (metrics.leetcode_streak_days or 0) + 1
         metrics.current_stress_score += 0.5
         extracted_actions.append("Extracted coding activity")
 
     # Simulate extracting stress
-    if "stress" in text or "tired" in text or "exhausted" in text:
-        metrics.current_stress_score = min(10, metrics.current_stress_score + 1)
+    crisis_keywords = ["suicide", "kill myself", "give up", "can't take it"]
+    if any(k in text for k in crisis_keywords):
+        metrics.current_stress_score = 10.0
+        extracted_actions.append("Detected severe crisis/burnout")
+    elif any(k in text for k in ["stress", "tired", "exhausted", "burnout", "depressed", "hopeless"]):
+        metrics.current_stress_score = min(10.0, metrics.current_stress_score + 2.0)
         extracted_actions.append("Detected high stress")
+    elif any(k in text for k in ["good", "great", "relaxed"]):
+        metrics.current_stress_score = max(0.0, metrics.current_stress_score - 2.0)
+        extracted_actions.append("Detected reduced stress")
 
-    metrics.focus_score = min(100, metrics.coding_streak_days * 10)
+    # Calculate dynamic focus score
+    base_focus = 65.0
+    streak_bonus = min(20.0, (metrics.coding_streak_days or 0) * 5.0)
+    
+    # Sleep penalty: if they sleep under 7 hours, they get penalized 5 pts per hour lost
+    actual_sleep = metrics.sleep_deficit_hours or 0.0
+    sleep_penalty = max(0.0, 7.0 - actual_sleep) * 5.0
+    stress_penalty = (metrics.current_stress_score or 0.0) * 2.0
+    
+    new_focus = base_focus + streak_bonus - sleep_penalty - stress_penalty
+    metrics.focus_score = max(0.0, min(100.0, new_focus))
     db.commit()
 
     agent_action = AgentAction(user_id=guest.id, action=f"Journal: {', '.join(extracted_actions) if extracted_actions else 'Processed entry'}")
@@ -428,6 +478,66 @@ async def upload_syllabus(
     db.commit()
     db.refresh(syllabus)
     return {"message": "Syllabus uploaded", "id": syllabus.id}
+
+
+# --- Health Data Endpoint ---
+
+from services.health_service import parse_health_export
+
+@app.post("/api/health/upload")
+async def upload_health_data(
+    file: UploadFile = File(...),
+    db: Session = Depends(get_db)
+):
+    GUEST_EMAIL = "guest@twinagent.local"
+    guest = db.query(User).filter(User.email == GUEST_EMAIL).first()
+    if not guest:
+        raise HTTPException(status_code=500, detail="Guest user not found")
+
+    contents = await file.read()
+    filename = file.filename or ""
+
+    try:
+        health_data = parse_health_export(contents, filename)
+    except Exception as e:
+        raise HTTPException(status_code=400, detail=f"Error parsing health file: {e}")
+        
+    extracted_actions = []
+    
+    # Update DailyMetrics
+    metrics = db.query(DailyMetrics).filter(DailyMetrics.user_id == guest.id).order_by(DailyMetrics.date.desc()).first()
+    if not metrics:
+        metrics = DailyMetrics(user_id=guest.id)
+        db.add(metrics)
+        
+    if health_data.get("hours_slept"):
+        metrics.sleep_deficit_hours = health_data["hours_slept"]
+        if health_data["hours_slept"] < 7:
+            metrics.current_stress_score = min(10.0, metrics.current_stress_score + 1.5)
+        else:
+            metrics.current_stress_score = max(0.0, metrics.current_stress_score - 1.0)
+        extracted_actions.append(f"Parsed {health_data['hours_slept']}h sleep from file")
+        
+    if health_data.get("stress_modifier"):
+        metrics.current_stress_score = min(10.0, metrics.current_stress_score + health_data["stress_modifier"])
+        extracted_actions.append("Adjusted stress from file metrics")
+
+    # Recalculate focus
+    base_focus = 65.0
+    streak_bonus = min(20.0, (metrics.coding_streak_days or 0) * 5.0)
+    actual_sleep = metrics.sleep_deficit_hours or 0.0
+    sleep_penalty = max(0.0, 7.0 - actual_sleep) * 5.0
+    stress_penalty = (metrics.current_stress_score or 0.0) * 2.0
+    
+    metrics.focus_score = max(0.0, min(100.0, base_focus + streak_bonus - sleep_penalty - stress_penalty))
+    db.commit()
+
+    if extracted_actions:
+        action = AgentAction(user_id=guest.id, action=f"Health Sync: {', '.join(extracted_actions)}")
+        db.add(action)
+        db.commit()
+
+    return {"message": "Health data synced successfully", "data": health_data}
 
 
 @app.get("/api/syllabus")

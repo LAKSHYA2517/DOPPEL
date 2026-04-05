@@ -24,6 +24,9 @@ function App() {
   const [syllabusContent, setSyllabusContent] = useState('');
   const [syllabusDeadline, setSyllabusDeadline] = useState('');
   const [syllabusFile, setSyllabusFile] = useState(null);
+  
+  // Health Data state
+  const [healthFile, setHealthFile] = useState(null);
 
   // Schedule state
   const [generatedSchedule, setGeneratedSchedule] = useState([]);
@@ -60,6 +63,7 @@ function App() {
       .then(() => {
         setMessage('✓ Sync Completed! GitHub commits and LeetCode problems updated.');
         setIsProcessing(false);
+        fetchState();
         setTimeout(() => setActiveTab('dashboard'), 500);
       })
       .catch((error) => {
@@ -79,6 +83,7 @@ function App() {
         setMessage('✓ Journal entry processed successfully!');
         setIsProcessing(false);
         setJournalText('');
+        fetchState();
         setTimeout(() => setActiveTab('dashboard'), 500);
       })
       .catch((error) => {
@@ -188,6 +193,30 @@ function App() {
       fetchSyllabi();
     } catch (error) {
       const errorMsg = error.response?.data?.detail || error.message || 'Error uploading PDF.';
+      setMessage(`✗ Upload Failed: ${errorMsg}`);
+    } finally {
+      setIsProcessing(false);
+    }
+  };
+
+  const handleHealthUpload = async (e) => {
+    e.preventDefault();
+    if (!healthFile) return;
+    setIsProcessing(true);
+    setMessage('⏳ Uploading and parsing health data...');
+    try {
+      const formData = new FormData();
+      formData.append('file', healthFile);
+      const res = await axios.post('http://localhost:8000/api/health/upload', formData, {
+        headers: { 'Content-Type': 'multipart/form-data' },
+        timeout: 15000,
+      });
+      setMessage(`✓ ${res.data.message}`);
+      setHealthFile(null);
+      fetchState();
+      setTimeout(() => setActiveTab('dashboard'), 1000);
+    } catch (error) {
+      const errorMsg = error.response?.data?.detail || error.message || 'Error uploading health data.';
       setMessage(`✗ Upload Failed: ${errorMsg}`);
     } finally {
       setIsProcessing(false);
@@ -415,7 +444,7 @@ function App() {
                   { label: 'LeetCode Streak', value: `${accountStatus?.metrics?.leetcode_streak_days ?? twinData.metrics.leetcode_streak_days ?? 0} days`, icon: '', color: 'from-yellow-500 to-orange-500' },
                   { label: 'Focus Score', value: twinData.metrics.focus_score, icon: '', color: 'from-blue-500 to-cyan-500' },
                   { label: 'Stress Index', value: `${twinData.metrics.current_stress_score.toFixed(1)}/10`, icon: '', color: twinData.metrics.current_stress_score > 7 ? 'from-red-500 to-orange-500' : 'from-green-500 to-emerald-500' },
-                  { label: 'Sleep Deficit', value: `${twinData.metrics.sleep_deficit_hours} hrs`, icon: '', color: 'from-purple-500 to-indigo-500' },
+                  { label: 'Sleep Status', value: twinData.metrics.sleep_deficit_hours < 7 ? `${twinData.metrics.sleep_deficit_hours} hrs (Sleep Deficit)` : twinData.metrics.sleep_deficit_hours > 9 ? `${twinData.metrics.sleep_deficit_hours} hrs (Overslept)` : `${twinData.metrics.sleep_deficit_hours} hrs (Sufficient Sleep)`, icon: '', color: 'from-purple-500 to-indigo-500' },
                 ].map((metric, i) => (
                   <div
                     key={i}
@@ -751,7 +780,7 @@ function App() {
 
           {/* --- NEW DATA INGESTION VIEW (Styled perfectly to your theme) --- */}
           {activeTab === 'data_ingestion' && (
-            <div className="grid grid-cols-1 lg:grid-cols-2 gap-8 w-full animate-in fade-in slide-in-from-bottom-4 duration-500">
+            <div className="grid grid-cols-1 lg:grid-cols-3 gap-8 w-full animate-in fade-in slide-in-from-bottom-4 duration-500">
               
               {/* Method 1: API Sync */}
               <div className={`rounded-3xl border transition-all duration-300 backdrop-blur-sm ${
@@ -833,6 +862,52 @@ function App() {
                     {isProcessing ? ' Extracting Entities...' : ' Analyze & Update Twin'}
                   </button>
                 </form>
+              </div>
+
+              {/* Method 3: Health Data Export */}
+              <div className={`rounded-3xl border transition-all duration-300 backdrop-blur-sm ${
+                darkMode ? 'bg-slate-800/50 border-slate-700/50' : 'bg-white border-slate-200'
+              } p-10 flex flex-col`}>
+                <h2 className={`text-2xl font-bold mb-3 flex items-center gap-3 ${
+                  darkMode ? 'text-slate-100' : 'text-slate-800'
+                }`}>
+                  Health Data Export
+                </h2>
+                <p className={`mb-8 text-sm ${darkMode ? 'text-slate-400' : 'text-slate-500'}`}>
+                  Upload a raw .csv or .json data export from Apple Health or Google Fit to precisely track sleep and activity metrics.
+                </p>
+                
+                <div className="flex-1 flex flex-col justify-center">
+                  <div className={`border-2 border-dashed rounded-2xl p-6 text-center transition-all duration-300 cursor-pointer hover:border-purple-500 hover:bg-purple-500/5 ${
+                    darkMode ? 'border-slate-600' : 'border-slate-300'
+                  }`}>
+                    <label className="cursor-pointer w-full h-full block">
+                      <div className="text-4xl mb-3"></div>
+                      <span className={`block font-bold mb-1 ${darkMode ? 'text-slate-200' : 'text-slate-700'}`}>
+                        {healthFile ? healthFile.name : 'Select or drop export file'}
+                      </span>
+                      <span className={`text-xs ${darkMode ? 'text-slate-400' : 'text-slate-500'}`}>
+                        Supports .csv, .json (Max 10MB)
+                      </span>
+                      <input 
+                        type="file" 
+                        accept=".csv,.json"
+                        className="hidden"
+                        onChange={e => setHealthFile(e.target.files[0])}
+                      />
+                    </label>
+                  </div>
+                </div>
+
+                <div className="mt-8">
+                  <button 
+                    onClick={handleHealthUpload}
+                    disabled={isProcessing || !healthFile}
+                    className="w-full py-4 px-6 rounded-xl font-bold text-lg text-white uppercase tracking-wider transition-all duration-300 hover:scale-105 active:scale-95 bg-linear-to-r from-blue-500 via-purple-500 to-pink-500 hover:shadow-2xl hover:shadow-purple-500/50 shadow-lg disabled:opacity-50 disabled:hover:scale-100"
+                  >
+                    {isProcessing ? ' Uploading...' : ' Sync Health Data'}
+                  </button>
+                </div>
               </div>
             </div>
           )}
