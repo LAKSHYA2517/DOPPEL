@@ -34,6 +34,7 @@ function App() {
   // Schedule state
   const [generatedSchedule, setGeneratedSchedule] = useState([]);
   const [isGenerating, setIsGenerating] = useState(false);
+  const [scheduleDifficulty, setScheduleDifficulty] = useState('auto');
 
   useEffect(() => {
     fetchState();
@@ -228,7 +229,7 @@ function App() {
 
   const handleSyllabusDelete = async (id) => {
     try {
-      await axios.delete(`http://localhost:8000/api/syllabus/${id}`);
+      await axios.delete(`/api/syllabus/${id}`);
       setMessage('✓ Syllabus deleted.');
       fetchSyllabi();
     } catch {
@@ -247,7 +248,7 @@ function App() {
     setIsGenerating(true);
     setMessage('⏳ Generating schedule with AI... This may take 15-30 seconds.');
     try {
-      const res = await axios.post('/api/schedule/generate', {}, { timeout: 60000 });
+      const res = await axios.post('/api/schedule/generate', { difficulty: scheduleDifficulty }, { timeout: 60000 });
       setMessage(`✓ ${res.data.message}`);
       fetchSchedule();
     } catch (error) {
@@ -260,7 +261,7 @@ function App() {
 
   const handleToggleTask = async (taskId) => {
     try {
-      await axios.patch(`http://localhost:8000/api/schedule/task/${taskId}/toggle`);
+      await axios.patch(`/api/schedule/task/${taskId}/toggle`);
       fetchSchedule();
     } catch {
       setMessage('✗ Failed to toggle task.');
@@ -285,7 +286,7 @@ function App() {
     setIsGenerating(true);
     setMessage('⏳ Adjusting schedule for missed tasks...');
     try {
-      const res = await axios.post('/api/schedule/adjust', {}, { timeout: 60000 });
+      const res = await axios.post('/api/schedule/adjust', { difficulty: scheduleDifficulty }, { timeout: 60000 });
       setMessage(`✓ ${res.data.message}`);
       fetchSchedule();
     } catch (error) {
@@ -597,6 +598,49 @@ function App() {
                 >
                   🔄 Adjust for Missed Tasks
                 </button>
+              </div>
+
+              {/* Difficulty Selector */}
+              <div className={`rounded-2xl border p-6 transition-all duration-300 backdrop-blur-sm ${
+                darkMode ? 'bg-slate-800/50 border-slate-700/50' : 'bg-white border-slate-200'
+              }`}>
+                <div className="flex items-center justify-between mb-4">
+                  <div>
+                    <h3 className={`text-sm font-bold uppercase tracking-wider ${
+                      darkMode ? 'text-slate-400' : 'text-slate-500'
+                    }`}>Schedule Difficulty</h3>
+                    <p className={`text-xs mt-1 ${
+                      darkMode ? 'text-slate-500' : 'text-slate-400'
+                    }`}>
+                      {scheduleDifficulty === 'auto' && 'The AI decides based on your stress, sleep & focus levels'}
+                      {scheduleDifficulty === 'easy' && 'Lighter workload with generous breaks & easy problems'}
+                      {scheduleDifficulty === 'medium' && 'Balanced workload with moderate study sessions'}
+                      {scheduleDifficulty === 'hard' && 'Intensive schedule with deep study blocks & hard problems'}
+                    </p>
+                  </div>
+                </div>
+                <div className="grid grid-cols-4 gap-3">
+                  {[
+                    { value: 'auto', label: '🤖 Auto', color: 'from-blue-500 to-cyan-500', ring: 'ring-blue-500/50' },
+                    { value: 'easy', label: '🌿 Easy', color: 'from-green-500 to-emerald-500', ring: 'ring-green-500/50' },
+                    { value: 'medium', label: '⚡ Medium', color: 'from-yellow-500 to-orange-500', ring: 'ring-yellow-500/50' },
+                    { value: 'hard', label: '🔥 Hard', color: 'from-red-500 to-rose-500', ring: 'ring-red-500/50' },
+                  ].map(opt => (
+                    <button
+                      key={opt.value}
+                      onClick={() => setScheduleDifficulty(opt.value)}
+                      className={`py-3 px-4 rounded-xl font-bold text-sm transition-all duration-300 relative overflow-hidden ${
+                        scheduleDifficulty === opt.value
+                          ? `bg-gradient-to-r ${opt.color} text-white shadow-lg ring-2 ${opt.ring} scale-105`
+                          : darkMode
+                          ? 'bg-slate-700/50 text-slate-300 hover:bg-slate-600/50 hover:scale-102'
+                          : 'bg-slate-100 text-slate-600 hover:bg-slate-200 hover:scale-102'
+                      }`}
+                    >
+                      {opt.label}
+                    </button>
+                  ))}
+                </div>
               </div>
 
               {/* Schedule Content */}

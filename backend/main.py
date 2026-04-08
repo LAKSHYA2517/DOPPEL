@@ -600,9 +600,14 @@ def _get_guest(db: Session):
     return guest
 
 
+class ScheduleGenerateRequest(BaseModel):
+    difficulty: str = "auto"  # auto, easy, medium, hard
+
+
 @app.post("/api/schedule/generate")
-def generate_schedule_endpoint(db: Session = Depends(get_db)):
+def generate_schedule_endpoint(request: ScheduleGenerateRequest = None, db: Session = Depends(get_db)):
     """Build SSV, call Gemini, store schedule in DB."""
+    difficulty = (request.difficulty if request else "auto") or "auto"
     guest = _get_guest(db)
 
     # Check that at least one syllabus exists
@@ -617,7 +622,7 @@ def generate_schedule_endpoint(db: Session = Depends(get_db)):
     # Call Gemini
     print("[Schedule] Calling Gemini...", flush=True)
     try:
-        tasks_data = generate_schedule(ssv)
+        tasks_data = generate_schedule(ssv, difficulty=difficulty)
     except ValueError as e:
         raise HTTPException(status_code=500, detail=str(e))
     except Exception as e:
@@ -777,8 +782,9 @@ def verify_tasks(db: Session = Depends(get_db)):
 
 
 @app.post("/api/schedule/adjust")
-def adjust_schedule(db: Session = Depends(get_db)):
+def adjust_schedule(request: ScheduleGenerateRequest = None, db: Session = Depends(get_db)):
     """Check for missed tasks and regenerate the remaining schedule."""
+    difficulty = (request.difficulty if request else "auto") or "auto"
     guest = _get_guest(db)
     today_str = datetime.now().strftime("%Y-%m-%d")
 
@@ -805,7 +811,7 @@ def adjust_schedule(db: Session = Depends(get_db)):
     ssv = build_ssv(db, guest.id)
 
     try:
-        tasks_data = generate_schedule(ssv)
+        tasks_data = generate_schedule(ssv, difficulty=difficulty)
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"Schedule adjustment failed: {str(e)}")
 
