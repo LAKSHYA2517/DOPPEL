@@ -314,24 +314,21 @@ function App() {
   );
 
   return (
-    <div className={`flex min-h-screen transition-colors duration-500 ${
-      darkMode ? 'bg-slate-900 text-slate-100' : 'bg-white text-slate-900'
-    } font-sans`}>
+    <div className={`flex h-screen overflow-hidden transition-colors duration-300 ${
+      darkMode ? 'bg-[var(--color-surface-dark)] text-slate-100' : 'bg-[var(--color-surface-light)] text-slate-900'
+    }`}>
       
       {/* MODERN SIDEBAR */}
-      <div className={`w-72 flex flex-col shadow-2xl z-10 transition-colors duration-300 ${
+      <div className={`w-72 flex flex-col z-10 transition-colors duration-300 ${
         darkMode 
-          ? 'bg-linear-to-b from-slate-800 via-slate-900 to-black border-r border-slate-700' 
-          : 'bg-linear-to-b from-slate-900 via-slate-800 to-slate-900 text-slate-300'
+          ? 'bg-[#121212] border-r border-slate-800' 
+          : 'bg-white border-r border-slate-200'
       }`}>
         
         {/* Logo Section */}
-        <div className="p-8 border-b border-slate-700/50">
-          <div className="flex items-center gap-3 mb-4">
-            <div className="relative">
-              <div className="absolute inset-0 bg-linear-to-r from-blue-500 to-purple-500 rounded-lg blur opacity-75 animate-pulse"></div>
-            </div>
-            <h2 className="text-2xl font-black bg-linear-to-r from-blue-400 via-purple-400 to-pink-400 bg-clip-text text-transparent">
+        <div className="p-8 pb-4">
+          <div className="flex items-center gap-3 mb-2">
+            <h2 className="text-2xl font-bold text-[var(--color-primary-500)] tracking-tight">
               TwinAgent
             </h2>
           </div>
@@ -346,10 +343,10 @@ function App() {
             <button
               key={tab}
               onClick={() => setActiveTab(tab)}
-              className={`w-full text-left px-5 py-4 rounded-xl capitalize font-bold transition-all duration-300 group relative overflow-hidden ${
+              className={`w-full text-left px-5 py-3 rounded-full capitalize font-medium transition-all duration-200 group relative overflow-hidden ${
                 activeTab === tab 
-                  ? 'bg-linear-to-r from-blue-500 via-purple-500 to-pink-500 text-white shadow-lg shadow-blue-500/30'
-                  : `${darkMode ? 'hover:bg-slate-700/50' : ''} text-slate-300 hover:text-white hover:bg-slate-700/30`
+                  ? 'bg-[var(--color-primary-500)] text-white shadow-sm'
+                  : darkMode ? 'text-slate-400 hover:text-white hover:bg-slate-800' : 'text-slate-500 hover:text-slate-900 hover:bg-slate-100'
               }`}
             >
               <span className="relative z-10 flex items-center gap-2">
@@ -360,13 +357,13 @@ function App() {
         </div>
 
         {/* Profile Card */}
-        <div className={`m-4 p-5 rounded-2xl backdrop-blur-md transition-all duration-300 ${
+        <div className={`m-4 p-5 rounded-2xl transition-all duration-300 ${
           darkMode
-            ? 'bg-slate-700/30 border border-slate-600/50 hover:border-slate-500/50'
-            : 'bg-slate-700/20 border border-slate-600/30'
+            ? 'bg-slate-800 border border-slate-700'
+            : 'bg-[var(--color-primary-50)] border border-[var(--color-primary-100)]'
         }`}>
-          <p className="text-xs font-bold uppercase tracking-wider text-slate-400 mb-2">Active Profile</p>
-          <p className="text-lg font-bold text-white">{twinData.profile.name}</p>
+          <p className="text-xs font-bold uppercase tracking-wider text-slate-500 mb-1">Active Profile</p>
+          <p className={`text-base font-bold ${darkMode ? 'text-white' : 'text-slate-900'}`}>{twinData.profile.name}</p>
           <p className="text-xs text-slate-400 mt-1">{twinData.profile.university}</p>
         </div>
 
@@ -390,21 +387,16 @@ function App() {
       <div className="flex-1 overflow-y-auto">
         
         {/* Header */}
-        <header className={`sticky top-0 z-20 p-8 backdrop-blur-md transition-colors duration-300 ${
-          darkMode
-            ? 'bg-slate-800/50 border-b border-slate-700/30'
-            : 'bg-white border-b border-slate-200'
+        <header className={`sticky top-0 z-20 px-10 py-6 transition-colors duration-300 ${
+          darkMode ? 'bg-[var(--color-surface-dark)]/90 backdrop-blur-sm border-b border-slate-800' : 'bg-[var(--color-surface-light)]/90 backdrop-blur-sm border-b border-slate-200'
         }`}>
-          <div className={`flex justify-between items-center border-b ${darkMode ? 'border-slate-700/30' : 'border-slate-200/50'}`}>
+          <div className="flex justify-between items-center">
             <div>
-              <h1 className={`text-5xl font-black tracking-tight bg-linear-to-r ${
-                darkMode
-                  ? 'from-blue-400 via-purple-400 to-pink-400'
-                  : 'from-slate-900 via-blue-600 to-purple-600'
-              } bg-clip-text text-transparent capitalize`}>
+              <h1 className={`text-4xl font-bold tracking-tight capitalize ${
+                darkMode ? 'text-slate-100' : 'text-slate-900'
+              }`}>
                 {activeTab.replace(/_/g, ' ')}
               </h1>
-              <div className="h-1 w-20 bg-linear-to-r from-blue-500 to-purple-500 rounded-full mt-2"></div>
             </div>
             {twinData.agent_status.needs_intervention ? (
               <div className={`px-6 py-3 rounded-full font-bold text-sm flex items-center gap-3 border transition-all duration-300 animate-pulse shadow-lg ${
@@ -444,18 +436,18 @@ function App() {
               {/* Metrics Grid */}
               <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-6">
                 {[
-                  { label: 'Commit Streak', value: `${accountStatus?.metrics?.coding_streak_days ?? twinData.metrics.coding_streak_days} days`, icon: '', color: 'from-orange-500 to-red-500' },
-                  { label: 'LeetCode Streak', value: `${accountStatus?.metrics?.leetcode_streak_days ?? twinData.metrics.leetcode_streak_days ?? 0} days`, icon: '', color: 'from-yellow-500 to-orange-500' },
-                  { label: 'Focus Score', value: twinData.metrics.focus_score, icon: '', color: 'from-blue-500 to-cyan-500' },
-                  { label: 'Stress Index', value: `${twinData.metrics.current_stress_score.toFixed(1)}/10`, icon: '', color: twinData.metrics.current_stress_score > 7 ? 'from-red-500 to-orange-500' : 'from-green-500 to-emerald-500' },
-                  { label: 'Sleep Status', value: twinData.metrics.sleep_deficit_hours < 7 ? `${twinData.metrics.sleep_deficit_hours} hrs (Sleep Deficit)` : twinData.metrics.sleep_deficit_hours > 9 ? `${twinData.metrics.sleep_deficit_hours} hrs (Overslept)` : `${twinData.metrics.sleep_deficit_hours} hrs (Sufficient Sleep)`, icon: '', color: 'from-purple-500 to-indigo-500' },
+                  { label: 'Commit Streak', value: `${accountStatus?.metrics?.coding_streak_days ?? twinData.metrics.coding_streak_days} days`, icon: '', textColor: 'text-orange-500' },
+                  { label: 'LeetCode Streak', value: `${accountStatus?.metrics?.leetcode_streak_days ?? twinData.metrics.leetcode_streak_days ?? 0} days`, icon: '', textColor: 'text-yellow-500' },
+                  { label: 'Focus Score', value: twinData.metrics.focus_score, icon: '', textColor: 'text-[var(--color-primary-500)]' },
+                  { label: 'Stress Index', value: `${twinData.metrics.current_stress_score.toFixed(1)}/10`, icon: '', textColor: twinData.metrics.current_stress_score > 7 ? 'text-red-500' : 'text-emerald-500' },
+                  { label: 'Sleep Status', value: twinData.metrics.sleep_deficit_hours < 7 ? `${twinData.metrics.sleep_deficit_hours} hrs (Sleep Deficit)` : twinData.metrics.sleep_deficit_hours > 9 ? `${twinData.metrics.sleep_deficit_hours} hrs (Overslept)` : `${twinData.metrics.sleep_deficit_hours} hrs (Sufficient Sleep)`, icon: '', textColor: 'text-indigo-500' },
                 ].map((metric, i) => (
                   <div
                     key={i}
-                    className={`p-6 rounded-2xl border backdrop-blur-sm transition-all duration-300 hover:scale-105 hover:shadow-xl group ${
+                    className={`p-6 rounded-2xl border transition-all duration-200 elevation-1 group card-hover ${
                       darkMode
-                        ? 'bg-slate-800/50 border-slate-700/50 hover:border-slate-600'
-                        : 'bg-white border-slate-200 hover:border-slate-300 hover:shadow-lg'
+                        ? 'bg-slate-800 border-slate-700 hover:bg-slate-700/80'
+                        : 'bg-white border-slate-200 hover:bg-slate-50'
                     }`}
                   >
                     <div className="flex items-start justify-between mb-4">
@@ -464,7 +456,7 @@ function App() {
                       </h3>
                     <span className="text-2xl group-hover:scale-110 transition-transform"></span>
                     </div>
-                    <p className={`text-3xl font-black bg-linear-to-r ${metric.color} bg-clip-text text-transparent`}>
+                    <p className={`text-3xl font-bold ${metric.textColor}`}>
                       {metric.value}
                     </p>
                   </div>
@@ -475,16 +467,16 @@ function App() {
               <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
                 
                 {/* Agent Analysis Card */}
-                <div className={`lg:col-span-2 p-8 rounded-3xl border transition-all duration-300 backdrop-blur-sm ${
+                <div className={`lg:col-span-2 p-8 rounded-2xl border transition-all duration-300 elevation-1 ${
                   twinData.agent_status.needs_intervention
                     ? darkMode
-                      ? 'bg-linear-to-br from-indigo-900/30 to-purple-900/30 border-indigo-500/50'
-                      : 'bg-linear-to-br from-indigo-100 to-purple-100 border-indigo-300'
+                      ? 'bg-indigo-900/30 border-indigo-500/50'
+                      : 'bg-indigo-50 border-indigo-200'
                     : darkMode
-                    ? 'bg-slate-800/50 border-slate-700/50'
+                    ? 'bg-slate-800 border-slate-700'
                     : 'bg-white border-slate-200'
                 }`}>
-                  <h2 className={`text-2xl font-bold mb-6 flex items-center gap-3 ${
+                  <h2 className={`text-xl font-bold mb-6 flex items-center gap-3 ${
                     twinData.agent_status.needs_intervention
                       ? darkMode ? 'text-indigo-300' : 'text-indigo-800'
                       : darkMode ? 'text-slate-100' : 'text-slate-800'
@@ -506,14 +498,14 @@ function App() {
                       {twinData.agent_status.history.slice(0, 3).map((hist, i) => (
                         <div
                           key={i}
-                          className={`p-4 rounded-xl backdrop-blur-sm transition-all duration-300 border ${
+                          className={`p-4 rounded-xl transition-all duration-300 border ${
                             twinData.agent_status.needs_intervention
                               ? darkMode
                                 ? 'bg-indigo-900/20 border-indigo-500/20 text-indigo-300'
-                                : 'bg-indigo-100 border-indigo-300 text-indigo-800'
+                                : 'bg-indigo-100/50 border-indigo-200 text-indigo-800'
                               : darkMode
-                              ? 'bg-slate-700/30 border-slate-600/30 text-slate-300'
-                              : 'bg-slate-100 border-slate-200 text-slate-600'
+                              ? 'bg-slate-700/50 border-slate-600/50 text-slate-300'
+                              : 'bg-slate-50 border-slate-200 text-slate-600'
                           }`}
                         >
                           <span className="font-mono text-xs opacity-75">{hist.time}</span>
@@ -525,12 +517,12 @@ function App() {
                 </div>
 
                 {/* Goals Card */}
-                <div className={`p-8 rounded-3xl border transition-all duration-300 backdrop-blur-sm ${
+                <div className={`p-8 rounded-2xl border transition-all duration-300 elevation-1 ${
                   darkMode
-                    ? 'bg-slate-800/50 border-slate-700/50'
+                    ? 'bg-slate-800 border-slate-700'
                     : 'bg-white border-slate-200'
                 }`}>
-                  <h2 className={`text-2xl font-bold mb-8 flex items-center gap-3 ${
+                  <h2 className={`text-xl font-bold mb-8 flex items-center gap-3 ${
                     darkMode ? 'text-slate-100' : 'text-slate-800'
                   }`}>
                     Goals
@@ -542,15 +534,15 @@ function App() {
                           <span className={`font-semibold ${darkMode ? 'text-slate-200' : 'text-slate-700'}`}>
                             {goal.name}
                           </span>
-                          <span className={`text-sm font-black bg-linear-to-r from-blue-500 to-purple-500 bg-clip-text text-transparent`}>
+                          <span className={`text-sm font-bold text-[var(--color-primary-500)]`}>
                             {goal.progress}%
                           </span>
                         </div>
-                        <div className={`w-full h-3 rounded-full overflow-hidden backdrop-blur-sm ${
-                          darkMode ? 'bg-slate-700/50' : 'bg-slate-200'
+                        <div className={`w-full h-2 rounded-full overflow-hidden ${
+                          darkMode ? 'bg-slate-700' : 'bg-slate-100'
                         }`}>
                           <div
-                            className="h-full rounded-full bg-linear-to-r from-blue-500 via-purple-500 to-pink-500 transition-all duration-500 shadow-lg shadow-purple-500/20"
+                            className="h-full rounded-full bg-[var(--color-primary-500)] transition-all duration-500"
                             style={{ width: `${goal.progress}%` }}
                           ></div>
                         </div>
@@ -572,7 +564,7 @@ function App() {
                 <button
                   onClick={handleGenerateSchedule}
                   disabled={isGenerating}
-                  className="px-6 py-3 rounded-xl font-bold text-white transition-all duration-300 hover:scale-105 active:scale-95 bg-linear-to-r from-blue-500 via-purple-500 to-pink-500 hover:shadow-2xl hover:shadow-purple-500/50 shadow-lg disabled:opacity-50 disabled:hover:scale-100"
+                  className="px-6 py-3 rounded-full font-bold text-white transition-all duration-200 elevation-2 hover:bg-[var(--color-primary-600)] bg-[var(--color-primary-500)] disabled:opacity-50"
                 >
                   {isGenerating ? '⏳ Generating...' : '🤖 Generate Schedule with AI'}
                 </button>
@@ -601,8 +593,8 @@ function App() {
               </div>
 
               {/* Difficulty Selector */}
-              <div className={`rounded-2xl border p-6 transition-all duration-300 backdrop-blur-sm ${
-                darkMode ? 'bg-slate-800/50 border-slate-700/50' : 'bg-white border-slate-200'
+              <div className={`rounded-2xl border p-6 transition-all duration-300 elevation-1 ${
+                darkMode ? 'bg-slate-800 border-slate-700' : 'bg-white border-slate-200'
               }`}>
                 <div className="flex items-center justify-between mb-4">
                   <div>
@@ -621,20 +613,20 @@ function App() {
                 </div>
                 <div className="grid grid-cols-4 gap-3">
                   {[
-                    { value: 'auto', label: '🤖 Auto', color: 'from-blue-500 to-cyan-500', ring: 'ring-blue-500/50' },
-                    { value: 'easy', label: '🌿 Easy', color: 'from-green-500 to-emerald-500', ring: 'ring-green-500/50' },
-                    { value: 'medium', label: '⚡ Medium', color: 'from-yellow-500 to-orange-500', ring: 'ring-yellow-500/50' },
-                    { value: 'hard', label: '🔥 Hard', color: 'from-red-500 to-rose-500', ring: 'ring-red-500/50' },
+                    { value: 'auto', label: '🤖 Auto', activeClass: 'bg-[var(--color-primary-500)] text-white elevation-2' },
+                    { value: 'easy', label: '🌿 Easy', activeClass: 'bg-green-500 text-white elevation-2' },
+                    { value: 'medium', label: '⚡ Medium', activeClass: 'bg-orange-500 text-white elevation-2' },
+                    { value: 'hard', label: '🔥 Hard', activeClass: 'bg-red-500 text-white elevation-2' },
                   ].map(opt => (
                     <button
                       key={opt.value}
                       onClick={() => setScheduleDifficulty(opt.value)}
-                      className={`py-3 px-4 rounded-xl font-bold text-sm transition-all duration-300 relative overflow-hidden ${
+                      className={`py-3 px-4 rounded-full font-semibold text-sm transition-all duration-200 ${
                         scheduleDifficulty === opt.value
-                          ? `bg-gradient-to-r ${opt.color} text-white shadow-lg ring-2 ${opt.ring} scale-105`
+                          ? opt.activeClass
                           : darkMode
-                          ? 'bg-slate-700/50 text-slate-300 hover:bg-slate-600/50 hover:scale-102'
-                          : 'bg-slate-100 text-slate-600 hover:bg-slate-200 hover:scale-102'
+                          ? 'bg-slate-700 text-slate-300 hover:bg-slate-600'
+                          : 'bg-slate-100 text-slate-600 hover:bg-slate-200'
                       }`}
                     >
                       {opt.label}
@@ -668,31 +660,30 @@ function App() {
                   const totalCount = dayGroup.tasks.length;
 
                   return (
-                    <div key={dayGroup.date} className={`rounded-3xl border transition-all duration-300 backdrop-blur-sm overflow-hidden ${
+                    <div key={dayGroup.date} className={`rounded-2xl border transition-all duration-300 overflow-hidden elevation-1 ${
                       isToday
                         ? darkMode
-                          ? 'bg-slate-800/70 border-purple-500/50 shadow-lg shadow-purple-500/10'
-                          : 'bg-white border-purple-300 shadow-lg shadow-purple-200/30'
+                          ? 'bg-slate-800 border-[var(--color-primary-500)]'
+                          : 'bg-white border-[var(--color-primary-500)]'
                         : isPast
                         ? darkMode
-                          ? 'bg-slate-800/30 border-slate-700/30 opacity-75'
+                          ? 'bg-slate-800/40 border-slate-700/40 opacity-75'
                           : 'bg-slate-50 border-slate-200 opacity-75'
                         : darkMode
-                        ? 'bg-slate-800/50 border-slate-700/50'
+                        ? 'bg-slate-800 border-slate-700'
                         : 'bg-white border-slate-200'
                     }`}>
-                      {/* Day Header */}
-                      <div className={`px-8 py-5 flex items-center justify-between ${
+                      <div className={`px-8 py-5 flex items-center justify-between border-b ${
                         isToday
-                          ? 'bg-gradient-to-r from-purple-500/10 to-pink-500/10'
-                          : ''
+                          ? darkMode ? 'border-[var(--color-primary-500)] bg-[var(--color-primary-500)]/10' : 'border-[var(--color-primary-200)] bg-[var(--color-primary-50)]'
+                          : darkMode ? 'border-slate-700' : 'border-slate-100'
                       }`}>
                         <div className="flex items-center gap-3">
-                          {isToday && <span className="w-3 h-3 rounded-full bg-purple-500 animate-pulse"></span>}
+                          {isToday && <span className="w-3 h-3 rounded-full bg-[var(--color-primary-500)] animate-pulse"></span>}
                           <div>
-                            <h3 className={`text-lg font-black ${
+                            <h3 className={`text-lg font-bold ${
                               isToday
-                                ? 'bg-gradient-to-r from-purple-400 to-pink-400 bg-clip-text text-transparent'
+                                ? 'text-[var(--color-primary-600)]'
                                 : darkMode ? 'text-slate-200' : 'text-slate-800'
                             }`}>
                               {isToday ? '📌 TODAY' : dayName}
@@ -735,32 +726,31 @@ function App() {
                               className={`flex items-center gap-4 p-4 rounded-xl border transition-all duration-200 ${
                                 isAutoVerified
                                   ? darkMode
-                                    ? 'bg-green-900/20 border-green-500/30'
+                                    ? 'bg-green-900/40 border-green-700'
                                     : 'bg-green-50 border-green-300'
                                   : isCompleted
                                   ? darkMode
-                                    ? 'bg-green-900/10 border-green-500/20 opacity-80'
+                                    ? 'bg-green-900/20 border-green-800 opacity-80'
                                     : 'bg-green-50/50 border-green-200 opacity-80'
                                   : isMissed
                                   ? darkMode
-                                    ? 'bg-red-900/15 border-red-500/30 opacity-70'
-                                    : 'bg-red-50 border-red-200 opacity-70'
+                                    ? 'bg-red-900/30 border-red-800/80'
+                                    : 'bg-red-50 border-red-200'
                                   : darkMode
-                                  ? 'bg-slate-700/20 border-slate-600/30 hover:border-purple-500/40 cursor-pointer'
-                                  : 'bg-white border-slate-200 hover:border-purple-300 cursor-pointer hover:shadow-md'
+                                  ? 'bg-slate-700 border-slate-600 cursor-pointer hover:bg-slate-600'
+                                  : 'bg-white border-slate-200 cursor-pointer hover:bg-slate-50'
                               }`}
                             >
-                              {/* Checkbox */}
-                              <div className={`w-6 h-6 rounded-lg border-2 flex items-center justify-center shrink-0 transition-all ${
+                              <div className={`w-6 h-6 rounded border-2 flex items-center justify-center shrink-0 transition-all ${
                                 isAutoVerified
                                   ? 'bg-green-500 border-green-500'
                                   : isCompleted
-                                  ? 'bg-purple-500 border-purple-500'
+                                  ? 'bg-[var(--color-primary-500)] border-[var(--color-primary-500)]'
                                   : isMissed
                                   ? 'bg-red-500/30 border-red-500'
                                   : darkMode
-                                  ? 'border-slate-500 hover:border-purple-400'
-                                  : 'border-slate-300 hover:border-purple-400'
+                                  ? 'border-slate-500'
+                                  : 'border-slate-300'
                               }`}>
                                 {isAutoVerified && <span className="text-white text-xs">🤖</span>}
                                 {isCompleted && !isAutoVerified && <span className="text-white text-xs">✓</span>}
@@ -830,8 +820,8 @@ function App() {
             <div className="grid grid-cols-1 lg:grid-cols-3 gap-8 w-full animate-in fade-in slide-in-from-bottom-4 duration-500">
               
               {/* Method 1: API Sync */}
-              <div className={`rounded-3xl border transition-all duration-300 backdrop-blur-sm ${
-                darkMode ? 'bg-slate-800/50 border-slate-700/50' : 'bg-white border-slate-200'
+              <div className={`rounded-2xl border transition-all duration-300 elevation-1 ${
+                darkMode ? 'bg-slate-800 border-slate-700' : 'bg-white border-slate-200'
               } p-10`}>
                 <h2 className={`text-2xl font-bold mb-3 flex items-center gap-3 ${
                   darkMode ? 'text-slate-100' : 'text-slate-800'
@@ -864,15 +854,15 @@ function App() {
                 <button 
                   onClick={handleApiSync}
                   disabled={isProcessing}
-                  className="w-full py-4 px-6 rounded-xl font-bold text-lg text-white uppercase tracking-wider transition-all duration-300 hover:scale-105 active:scale-95 bg-linear-to-r from-blue-500 via-purple-500 to-pink-500 hover:shadow-2xl hover:shadow-purple-500/50 shadow-lg disabled:opacity-50 disabled:hover:scale-100"
+                  className="w-full py-4 px-6 rounded-full font-bold text-lg text-white uppercase tracking-wider transition-all duration-200 elevation-2 hover:bg-[var(--color-primary-600)] bg-[var(--color-primary-500)] disabled:opacity-50"
                 >
                   {isProcessing ? 'Fetching APIs...' : ' Fetch'}
                 </button>
               </div>
 
               {/* Method 2: NLP Journal */}
-              <div className={`rounded-3xl border transition-all duration-300 backdrop-blur-sm ${
-                darkMode ? 'bg-slate-800/50 border-slate-700/50' : 'bg-white border-slate-200'
+              <div className={`rounded-2xl border transition-all duration-300 elevation-1 ${
+                darkMode ? 'bg-slate-800 border-slate-700' : 'bg-white border-slate-200'
               } p-10`}>
                 <h2 className={`text-2xl font-bold mb-3 flex items-center gap-3 ${
                   darkMode ? 'text-slate-100' : 'text-slate-800'
@@ -904,7 +894,7 @@ function App() {
                   <button 
                     type="submit" 
                     disabled={isProcessing || !journalText}
-                    className="w-full py-4 px-6 rounded-xl font-bold text-lg text-white uppercase tracking-wider transition-all duration-300 hover:scale-105 active:scale-95 bg-linear-to-r from-blue-500 via-purple-500 to-pink-500 hover:shadow-2xl hover:shadow-purple-500/50 shadow-lg disabled:opacity-50 disabled:hover:scale-100"
+                    className="w-full py-4 px-6 rounded-full font-bold text-lg text-white uppercase tracking-wider transition-all duration-200 elevation-2 hover:bg-[var(--color-primary-600)] bg-[var(--color-primary-500)] disabled:opacity-50"
                   >
                     {isProcessing ? ' Extracting Entities...' : ' Analyze & Update Twin'}
                   </button>
@@ -912,8 +902,8 @@ function App() {
               </div>
 
               {/* Method 3: Health Data Export */}
-              <div className={`rounded-3xl border transition-all duration-300 backdrop-blur-sm ${
-                darkMode ? 'bg-slate-800/50 border-slate-700/50' : 'bg-white border-slate-200'
+              <div className={`rounded-2xl border transition-all duration-300 elevation-1 ${
+                darkMode ? 'bg-slate-800 border-slate-700' : 'bg-white border-slate-200'
               } p-10 flex flex-col`}>
                 <h2 className={`text-2xl font-bold mb-3 flex items-center gap-3 ${
                   darkMode ? 'text-slate-100' : 'text-slate-800'
@@ -950,7 +940,7 @@ function App() {
                   <button 
                     onClick={handleHealthUpload}
                     disabled={isProcessing || !healthFile}
-                    className="w-full py-4 px-6 rounded-xl font-bold text-lg text-white uppercase tracking-wider transition-all duration-300 hover:scale-105 active:scale-95 bg-linear-to-r from-blue-500 via-purple-500 to-pink-500 hover:shadow-2xl hover:shadow-purple-500/50 shadow-lg disabled:opacity-50 disabled:hover:scale-100"
+                    className="w-full py-4 px-6 rounded-full font-bold text-lg text-white uppercase tracking-wider transition-all duration-200 elevation-2 hover:bg-[var(--color-primary-600)] bg-[var(--color-primary-500)] disabled:opacity-50"
                   >
                     {isProcessing ? ' Uploading...' : ' Sync Health Data'}
                   </button>
@@ -964,8 +954,8 @@ function App() {
             <div className="grid grid-cols-1 lg:grid-cols-2 gap-8 w-full animate-in fade-in slide-in-from-bottom-4 duration-500">
               
               {/* GitHub Status */}
-              <div className={`rounded-3xl border transition-all duration-300 backdrop-blur-sm ${
-                darkMode ? 'bg-slate-800/50 border-slate-700/50' : 'bg-white border-slate-200'
+              <div className={`rounded-2xl border transition-all duration-300 elevation-1 ${
+                darkMode ? 'bg-slate-800 border-slate-700' : 'bg-white border-slate-200'
               } p-10`}>
                 <h2 className={`text-2xl font-bold mb-3 ${
                   darkMode ? 'text-slate-100' : 'text-slate-800'
@@ -994,7 +984,7 @@ function App() {
                         <p className={`text-xs uppercase tracking-wider font-bold ${darkMode ? 'text-slate-400' : 'text-slate-500'}`}>
                           Commits Streak
                         </p>
-                        <p className="text-3xl font-black bg-linear-to-r from-blue-500 to-cyan-500 bg-clip-text text-transparent">
+                        <p className="text-3xl font-bold text-[var(--color-primary-500)]">
                           {accountStatus.metrics?.coding_streak_days || 0} days
                         </p>
                       </div>
@@ -1022,8 +1012,8 @@ function App() {
               </div>
 
               {/* LeetCode Status */}
-              <div className={`rounded-3xl border transition-all duration-300 backdrop-blur-sm ${
-                darkMode ? 'bg-slate-800/50 border-slate-700/50' : 'bg-white border-slate-200'
+              <div className={`rounded-2xl border transition-all duration-300 elevation-1 ${
+                darkMode ? 'bg-slate-800 border-slate-700' : 'bg-white border-slate-200'
               } p-10`}>
                 <h2 className={`text-2xl font-bold mb-3 ${
                   darkMode ? 'text-slate-100' : 'text-slate-800'
@@ -1052,7 +1042,7 @@ function App() {
                         <p className={`text-xs uppercase tracking-wider font-bold ${darkMode ? 'text-slate-400' : 'text-slate-500'}`}>
                           Problem Solving Streak
                         </p>
-                        <p className="text-3xl font-black bg-linear-to-r from-orange-500 to-red-500 bg-clip-text text-transparent">
+                        <p className="text-3xl font-bold text-[var(--color-primary-500)]">
                           Active
                         </p>
                       </div>
@@ -1086,8 +1076,8 @@ function App() {
             <div className="grid grid-cols-1 lg:grid-cols-2 gap-8 w-full animate-in fade-in slide-in-from-bottom-4 duration-500">
               
               {/* GitHub Connection */}
-              <div className={`rounded-3xl border transition-all duration-300 backdrop-blur-sm ${
-                darkMode ? 'bg-slate-800/50 border-slate-700/50' : 'bg-white border-slate-200'
+              <div className={`rounded-2xl border transition-all duration-300 elevation-1 ${
+                darkMode ? 'bg-slate-800 border-slate-700' : 'bg-white border-slate-200'
               } p-10`}>
                 <div className="flex items-start justify-between gap-4 mb-6">
                   <div>
@@ -1101,7 +1091,7 @@ function App() {
                   <button
                     type="button"
                     onClick={() => setShowGithubForm(!showGithubForm)}
-                    className="px-4 py-2 rounded-full bg-blue-500 text-white font-semibold hover:bg-blue-400"
+                    className="px-4 py-2 rounded-full bg-[var(--color-primary-500)] text-white font-semibold hover:bg-[var(--color-primary-600)]"
                   >
                     {showGithubForm ? 'Hide Link' : 'Link GitHub'}
                   </button>
@@ -1147,8 +1137,8 @@ function App() {
               </div>
 
               {/* LeetCode Connection */}
-              <div className={`rounded-3xl border transition-all duration-300 backdrop-blur-sm ${
-                darkMode ? 'bg-slate-800/50 border-slate-700/50' : 'bg-white border-slate-200'
+              <div className={`rounded-2xl border transition-all duration-300 elevation-1 ${
+                darkMode ? 'bg-slate-800 border-slate-700' : 'bg-white border-slate-200'
               } p-10`}>
                 <div className="flex items-start justify-between gap-4 mb-6">
                   <div>
@@ -1162,7 +1152,7 @@ function App() {
                   <button
                     type="button"
                     onClick={() => setShowLeetcodeForm(!showLeetcodeForm)}
-                    className="px-4 py-2 rounded-full bg-blue-500 text-white font-semibold hover:bg-blue-400"
+                    className="px-4 py-2 rounded-full bg-[var(--color-primary-500)] text-white font-semibold hover:bg-[var(--color-primary-600)]"
                   >
                     {showLeetcodeForm ? 'Hide Link' : 'Link LeetCode'}
                   </button>
@@ -1196,7 +1186,7 @@ function App() {
                     <button
                       type="submit"
                       disabled={isProcessing}
-                      className="w-full py-4 px-6 rounded-xl font-bold text-lg text-white uppercase tracking-wider transition-all duration-300 hover:scale-105 active:scale-95 bg-linear-to-r from-blue-500 via-purple-500 to-pink-500 hover:shadow-2xl hover:shadow-purple-500/50 shadow-lg disabled:opacity-50"
+                      className="w-full py-4 px-6 rounded-full font-bold text-lg text-white uppercase tracking-wider transition-all duration-200 elevation-2 hover:bg-[var(--color-primary-600)] bg-[var(--color-primary-500)] disabled:opacity-50"
                     >
                       {isProcessing ? 'Linking LeetCode...' : 'Link LeetCode'}
                     </button>
@@ -1204,8 +1194,8 @@ function App() {
                 )}
               </div>
               {/* Syllabus Management — Full Width */}
-              <div className={`col-span-1 lg:col-span-2 rounded-3xl border transition-all duration-300 backdrop-blur-sm ${
-                darkMode ? 'bg-slate-800/50 border-slate-700/50' : 'bg-white border-slate-200'
+              <div className={`col-span-1 lg:col-span-2 rounded-2xl border transition-all duration-300 elevation-1 ${
+                darkMode ? 'bg-slate-800 border-slate-700' : 'bg-white border-slate-200'
               } p-10`}>
                 <div className="flex items-start justify-between gap-4 mb-6">
                   <div>
@@ -1219,7 +1209,7 @@ function App() {
                   <button
                     type="button"
                     onClick={() => setShowSyllabusForm(!showSyllabusForm)}
-                    className="px-4 py-2 rounded-full bg-blue-500 text-white font-semibold hover:bg-blue-400 transition-colors"
+                    className="px-4 py-2 rounded-full bg-[var(--color-primary-500)] text-white font-semibold hover:bg-[var(--color-primary-600)] transition-colors"
                   >
                     {showSyllabusForm ? 'Hide Form' : '+ Add Syllabus'}
                   </button>
@@ -1232,11 +1222,11 @@ function App() {
                       <button
                         type="button"
                         onClick={() => setSyllabusMode('text')}
-                        className={`px-5 py-2 rounded-full text-sm font-bold transition-all duration-300 ${
+                        className={`px-5 py-2 rounded-full text-sm font-bold transition-all duration-200 ${
                           syllabusMode === 'text'
-                            ? 'bg-linear-to-r from-blue-500 to-purple-500 text-white shadow-lg'
+                            ? 'bg-[var(--color-primary-500)] text-white elevation-1'
                             : darkMode
-                            ? 'bg-slate-700/50 text-slate-300 hover:bg-slate-600/50'
+                            ? 'bg-slate-700 text-slate-300 hover:bg-slate-600'
                             : 'bg-slate-200 text-slate-600 hover:bg-slate-300'
                         }`}
                       >
@@ -1245,11 +1235,11 @@ function App() {
                       <button
                         type="button"
                         onClick={() => setSyllabusMode('pdf')}
-                        className={`px-5 py-2 rounded-full text-sm font-bold transition-all duration-300 ${
+                        className={`px-5 py-2 rounded-full text-sm font-bold transition-all duration-200 ${
                           syllabusMode === 'pdf'
-                            ? 'bg-linear-to-r from-blue-500 to-purple-500 text-white shadow-lg'
+                            ? 'bg-[var(--color-primary-500)] text-white elevation-1'
                             : darkMode
-                            ? 'bg-slate-700/50 text-slate-300 hover:bg-slate-600/50'
+                            ? 'bg-slate-700 text-slate-300 hover:bg-slate-600'
                             : 'bg-slate-200 text-slate-600 hover:bg-slate-300'
                         }`}
                       >
@@ -1338,7 +1328,7 @@ function App() {
                       <button
                         type="submit"
                         disabled={isProcessing}
-                        className="w-full py-4 px-6 rounded-xl font-bold text-lg text-white uppercase tracking-wider transition-all duration-300 hover:scale-105 active:scale-95 bg-linear-to-r from-blue-500 via-purple-500 to-pink-500 hover:shadow-2xl hover:shadow-purple-500/50 shadow-lg disabled:opacity-50"
+                        className="w-full py-4 px-6 rounded-full font-bold text-lg text-white uppercase tracking-wider transition-all duration-200 elevation-2 hover:bg-[var(--color-primary-600)] bg-[var(--color-primary-500)] disabled:opacity-50"
                       >
                         {isProcessing ? 'Saving...' : syllabusMode === 'text' ? 'Save Syllabus' : 'Upload PDF'}
                       </button>

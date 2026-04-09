@@ -6,11 +6,13 @@ import os
 import time
 from datetime import datetime
 from google import genai
+import groq
 from dotenv import load_dotenv
 
 load_dotenv()
 
 GEMINI_API_KEY = os.getenv("GEMINI_API_KEY", "")
+GROQ_API_KEY = os.getenv("GROQ_API_KEY", "")
 
 
 def generate_schedule(ssv: dict, difficulty: str = "auto") -> list[dict]:
@@ -136,6 +138,19 @@ Generate the schedule now:"""
     max_retries = 3
     base_delay = 2
 
+    def clean_json_response(text):
+        if text.startswith("```"):
+            lines = text.split("\n")
+            if lines[0].startswith("```"):
+                lines = lines[1:]
+            if lines and lines[-1].strip() == "```":
+                lines = lines[:-1]
+            return "\n".join(lines).strip()
+        return text
+
+    raw_text = None
+    success = False
+
     for attempt in range(max_retries):
         try:
             response = client.models.generate_content(
@@ -145,30 +160,8 @@ Generate the schedule now:"""
 
             raw_text = response.text.strip()
             print(f"[Gemini] Response received ({len(raw_text)} chars)")
-
-            # Clean up response — strip markdown code fences if present
-            if raw_text.startswith("```"):
-                # Remove ```json and ``` wrappers
-                lines = raw_text.split("\n")
-                if lines[0].startswith("```"):
-                    lines = lines[1:]
-                if lines and lines[-1].strip() == "```":
-                    lines = lines[:-1]
-                raw_text = "\n".join(lines)
-
-            schedule = json.loads(raw_text)
-
-            if not isinstance(schedule, list):
-                print(f"[Gemini] Response is not a list, wrapping...")
-                schedule = [schedule]
-
-            print(f"[Gemini] Parsed {len(schedule)} tasks from response")
-            return schedule
-
-        except json.JSONDecodeError as e:
-            print(f"[Gemini] JSON parse error: {e}")
-            print(f"[Gemini] Raw response: {raw_text[:500]}")
-            raise ValueError(f"Gemini returned invalid JSON: {e}")
+            success = True
+            break
         except Exception as e:
             print(f"[Gemini] Exception on attempt {attempt + 1}: {e}")
             if attempt < max_retries - 1:
@@ -176,5 +169,43 @@ Generate the schedule now:"""
                 print(f"[Gemini] Retrying in {delay} seconds...")
                 time.sleep(delay)
             else:
-                print(f"[Gemini] Max retries reached. Failing.")
-                raise
+                print(f"[Gemini] Max retries reached.")
+
+    if not success:
+        if not GROQ_API_KEY:
+            raise ValueError("Gemini failed and GROQ_API_KEY is not configured for fallback.")
+            
+        print("[Fallback] Gemini limit reached or failed. Attempting to generate schedule using Groq API (llama-3.3-70b-versatile)...")
+        try:
+            groq_client = groq.Groq(api_key=GROQ_API_KEY)
+            chat_completion = groq_client.chat.completions.create(
+                messages=[
+                    {
+                        "role": "user",
+                        "content": prompt,
+                    }
+                ],
+                model="llama-3.3-70b-versatile",
+                temperature=0.3,
+            )
+            raw_text = chat_completion.choices[0].message.content.strip()
+            print(f"[Groq] Response received ({len(raw_text)} chars)")
+        except Exception as groq_e:
+            print(f"[Groq] Fallback also failed: {groq_e}")
+            raise ValueError(f"Both Gemini and Groq fallback failed. Groq error: {groq_e}")
+
+    try:
+        clean_text = clean_json_response(raw_text)
+        schedule = json.loads(clean_text)
+
+        if not isinstance(schedule, list):
+            print(f"[LLM] Response is not a list, wrapping...")
+            schedule = [schedule]
+
+        print(f"[LLM] Parsed {len(schedule)} tasks from response")
+        return schedule
+
+    except json.JSONDecodeError as e:
+        print(f"[LLM] JSON parse error: {e}")
+        print(f"[LLM] Raw response: {raw_text[:500]}")
+        raise ValueError(f"LLM returned invalid JSON: {e}")

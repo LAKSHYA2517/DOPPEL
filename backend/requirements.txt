@@ -10,3 +10,4 @@ requests
 httpx
 python-multipart
 google-genai
+groq
