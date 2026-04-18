@@ -5,11 +5,11 @@ import axios from 'axios';
 axios.defaults.baseURL = import.meta.env.VITE_API_URL || 'http://localhost:8000';
 
 const ACCENT_COLORS = [
-  { name: 'Orange', main: '#FF8C00', dark: '#E65100' },
-  { name: 'Blue', main: '#3B82F6', dark: '#2563EB' },
-  { name: 'Emerald', main: '#10B981', dark: '#059669' },
-  { name: 'Violet', main: '#8B5CF6', dark: '#7C3AED' },
-  { name: 'Rose', main: '#F43F5E', dark: '#E11D48' }
+  { name: 'Orange', main: '#FF8C00', dark: '#E65100', light: '#FFF3E0', lighter: '#FFE0B2' },
+  { name: 'Blue', main: '#3B82F6', dark: '#2563EB', light: '#EFF6FF', lighter: '#DBEAFE' },
+  { name: 'Emerald', main: '#10B981', dark: '#059669', light: '#ECFDF5', lighter: '#D1FAE5' },
+  { name: 'Violet', main: '#8B5CF6', dark: '#7C3AED', light: '#F5F3FF', lighter: '#EDE9FE' },
+  { name: 'Rose', main: '#F43F5E', dark: '#E11D48', light: '#FFF1F2', lighter: '#FFE4E6' }
 ];
 
 function App() {
@@ -349,6 +349,8 @@ function App() {
         darkMode ? 'bg-linear-to-br from-slate-900 via-slate-800 to-black' : 'bg-white'
       }`}
       style={{
+        '--color-primary-50': accentColor.light,
+        '--color-primary-100': accentColor.lighter,
         '--color-primary-500': accentColor.main,
         '--color-primary-600': accentColor.dark,
       }}
@@ -371,6 +373,8 @@ function App() {
         darkMode ? 'bg-[var(--color-surface-dark)] text-slate-100' : 'bg-[var(--color-surface-light)] text-slate-900'
       }`}
       style={{
+        '--color-primary-50': accentColor.light,
+        '--color-primary-100': accentColor.lighter,
         '--color-primary-500': accentColor.main,
         '--color-primary-600': accentColor.dark,
       }}

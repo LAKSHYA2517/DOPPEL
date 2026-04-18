@@ -9,6 +9,7 @@ An advanced, AI-driven personal companion and scheduler designed to help you sta
 - **Auto-Verification:** Automatically verify programming and repository tasks via GitHub and LeetCode API synchronizations. 
 - **Missed Task Adjustment:** The AI will seamlessly restructure your future schedule to account for any missed tasks or study blocks to ensure you still hit your syllabus deadlines.
 - **NLP Daily Check-ins:** Chat with your agent, provide a quick summary of your day ("I slept 8 hours and finished leetcode"), and let the server intelligently extract metrics to adjust DOPPEL's state.
+- **Customizable Interface:** Easily personalize your active profile and dynamically change the workspace's accent colors with the selection persisting instantly.
 
 ## 🏁 Getting Started
 
