@@ -293,14 +293,21 @@ function App() {
   const handleGenerateSchedule = async () => {
     setIsGenerating(true);
     setMessage('⏳ Generating schedule with AI... This may take 15-30 seconds.');
+    
+    // Update message if generation takes over 60 seconds
+    const timeoutMsg = setTimeout(() => {
+      setMessage('⏳ AI is processing a large syllabus! This might take a few minutes...');
+    }, 60000);
+
     try {
-      const res = await axios.post('/api/schedule/generate', { difficulty: scheduleDifficulty }, { timeout: 120000 });
+      const res = await axios.post('/api/schedule/generate', { difficulty: scheduleDifficulty }, { timeout: 300000 });
       setMessage(`✓ ${res.data.message}`);
       fetchSchedule();
     } catch (error) {
       const errorMsg = error.response?.data?.detail || error.message;
       setMessage(`✗ Schedule generation failed: ${errorMsg}`);
     } finally {
+      clearTimeout(timeoutMsg);
       setIsGenerating(false);
     }
   };
@@ -331,14 +338,20 @@ function App() {
   const handleAdjustSchedule = async () => {
     setIsGenerating(true);
     setMessage('⏳ Adjusting schedule for missed tasks...');
+
+    const timeoutMsg = setTimeout(() => {
+      setMessage('⏳ AI is adjusting a complex schedule! This might take a few minutes...');
+    }, 60000);
+
     try {
-      const res = await axios.post('/api/schedule/adjust', { difficulty: scheduleDifficulty }, { timeout: 120000 });
+      const res = await axios.post('/api/schedule/adjust', { difficulty: scheduleDifficulty }, { timeout: 300000 });
       setMessage(`✓ ${res.data.message}`);
       fetchSchedule();
     } catch (error) {
       const errorMsg = error.response?.data?.detail || error.message;
       setMessage(`✗ Adjustment failed: ${errorMsg}`);
     } finally {
+      clearTimeout(timeoutMsg);
       setIsGenerating(false);
     }
   };
@@ -1501,8 +1514,8 @@ function App() {
                                 : 'bg-red-50 border-red-300'
                               : isUrgent
                               ? darkMode
-                                ? 'bg-yellow-900/20 border-yellow-500/30'
-                                : 'bg-yellow-50 border-yellow-300'
+                                ? 'bg-slate-800 border-[var(--color-primary-600)] shadow-[0_0_10px_var(--color-primary-600)] shadow-opacity-20'
+                                : 'bg-[var(--color-primary-50)] border-[var(--color-primary-500)]'
                               : darkMode
                               ? 'bg-slate-700/30 border-slate-600/50 hover:border-slate-500'
                               : 'bg-slate-50 border-slate-200 hover:border-slate-300'
@@ -1527,9 +1540,9 @@ function App() {
                             <div className="flex items-center gap-3 mt-2">
                               <span className={`text-xs font-semibold ${
                                 isOverdue
-                                  ? 'text-red-400'
+                                  ? 'text-red-500'
                                   : isUrgent
-                                  ? 'text-yellow-400'
+                                  ? 'text-[var(--color-primary-600)] font-bold'
                                   : darkMode ? 'text-slate-400' : 'text-slate-500'
                               }`}>
                                 📅 {deadlineDate ? deadlineDate.toLocaleDateString() : 'No deadline'}
