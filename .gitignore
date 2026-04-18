@@ -10,6 +10,7 @@ env/
 *.db
 .pytest_cache/
 .mypy_cache/
+uploads/
 
 # Node / Frontend
 node_modules/

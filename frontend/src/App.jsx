@@ -19,6 +19,10 @@ function App() {
   const [isProcessing, setIsProcessing] = useState(false);
   const [message, setMessage] = useState('');
 
+  // Profile state
+  const [profileName, setProfileName] = useState('');
+  const [profileUniversity, setProfileUniversity] = useState('');
+
   // Syllabus state
   const [syllabi, setSyllabi] = useState([]);
   const [showSyllabusForm, setShowSyllabusForm] = useState(false);
@@ -53,7 +57,13 @@ function App() {
 
   const fetchState = () => {
     axios.get('/api/twin/state')
-      .then(res => setTwinData(res.data))
+      .then(res => {
+        setTwinData(res.data);
+        if (res.data?.profile) {
+          setProfileName(res.data.profile.name || '');
+          setProfileUniversity(res.data.profile.university || '');
+        }
+      })
       .catch(() => {
         setTwinData(null);
         setMessage('Unable to load twin state.');
@@ -96,6 +106,24 @@ function App() {
         setIsProcessing(false);
         console.error('Journal Error:', error);
       });
+  };
+
+  const handleProfileUpdate = async (e) => {
+    e.preventDefault();
+    setIsProcessing(true);
+    setMessage('⏳ Updating profile...');
+    try {
+      await axios.post('/api/profile/update', { 
+        name: profileName, 
+        university: profileUniversity 
+      });
+      setMessage('✓ Profile updated successfully!');
+      fetchState();
+    } catch (error) {
+      setMessage('✗ Failed to update profile.');
+    } finally {
+      setIsProcessing(false);
+    }
   };
 
   const handleGithubConnect = async (e) => {
@@ -248,7 +276,7 @@ function App() {
     setIsGenerating(true);
     setMessage('⏳ Generating schedule with AI... This may take 15-30 seconds.');
     try {
-      const res = await axios.post('/api/schedule/generate', { difficulty: scheduleDifficulty }, { timeout: 60000 });
+      const res = await axios.post('/api/schedule/generate', { difficulty: scheduleDifficulty }, { timeout: 120000 });
       setMessage(`✓ ${res.data.message}`);
       fetchSchedule();
     } catch (error) {
@@ -286,7 +314,7 @@ function App() {
     setIsGenerating(true);
     setMessage('⏳ Adjusting schedule for missed tasks...');
     try {
-      const res = await axios.post('/api/schedule/adjust', { difficulty: scheduleDifficulty }, { timeout: 60000 });
+      const res = await axios.post('/api/schedule/adjust', { difficulty: scheduleDifficulty }, { timeout: 120000 });
       setMessage(`✓ ${res.data.message}`);
       fetchSchedule();
     } catch (error) {
@@ -329,7 +357,7 @@ function App() {
         <div className="p-8 pb-4">
           <div className="flex items-center gap-3 mb-2">
             <h2 className="text-2xl font-bold text-[var(--color-primary-500)] tracking-tight">
-              TwinAgent
+              DOPPEL
             </h2>
           </div>
           <p className={`text-xs font-semibold uppercase tracking-widest ${darkMode ? 'text-slate-500' : 'text-slate-400'}`}>
@@ -1075,6 +1103,57 @@ function App() {
           {activeTab === 'settings' && (
             <div className="grid grid-cols-1 lg:grid-cols-2 gap-8 w-full animate-in fade-in slide-in-from-bottom-4 duration-500">
               
+              {/* Profile Settings */}
+              <div className={`col-span-1 lg:col-span-2 rounded-2xl border transition-all duration-300 elevation-1 ${
+                darkMode ? 'bg-slate-800 border-slate-700' : 'bg-white border-slate-200'
+              } p-10`}>
+                <div className="flex items-start justify-between gap-4 mb-6">
+                  <div>
+                    <h2 className={`text-2xl font-bold ${darkMode ? 'text-slate-100' : 'text-slate-800'}`}>
+                      Profile Information
+                    </h2>
+                    <p className={`text-sm ${darkMode ? 'text-slate-400' : 'text-slate-500'}`}>
+                      Update your display name and institution.
+                    </p>
+                  </div>
+                </div>
+                <form onSubmit={handleProfileUpdate} className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  <input
+                    value={profileName}
+                    onChange={(e) => setProfileName(e.target.value)}
+                    type="text"
+                    placeholder="Full Name"
+                    className={`w-full px-4 py-3 rounded-xl transition-all duration-300 outline-none focus:ring-2 focus:ring-purple-500 border ${
+                      darkMode
+                        ? 'bg-slate-700/50 border-slate-600/50 text-slate-100 focus:border-purple-500'
+                        : 'bg-white border-slate-300 text-slate-800 focus:border-transparent'
+                    }`}
+                    required
+                  />
+                  <input
+                    value={profileUniversity}
+                    onChange={(e) => setProfileUniversity(e.target.value)}
+                    type="text"
+                    placeholder="Institution / Company"
+                    className={`w-full px-4 py-3 rounded-xl transition-all duration-300 outline-none focus:ring-2 focus:ring-purple-500 border ${
+                      darkMode
+                        ? 'bg-slate-700/50 border-slate-600/50 text-slate-100 focus:border-purple-500'
+                        : 'bg-white border-slate-300 text-slate-800 focus:border-transparent'
+                    }`}
+                    required
+                  />
+                  <div className="md:col-span-2">
+                    <button
+                      type="submit"
+                      disabled={isProcessing}
+                      className="w-full sm:w-auto py-3 px-8 rounded-full font-bold text-white uppercase tracking-wider transition-all duration-200 elevation-2 hover:bg-[var(--color-primary-600)] bg-[var(--color-primary-500)] disabled:opacity-50"
+                    >
+                      {isProcessing ? 'Updating...' : 'Update Profile'}
+                    </button>
+                  </div>
+                </form>
+              </div>
+
               {/* GitHub Connection */}
               <div className={`rounded-2xl border transition-all duration-300 elevation-1 ${
                 darkMode ? 'bg-slate-800 border-slate-700' : 'bg-white border-slate-200'
@@ -1128,7 +1207,7 @@ function App() {
                     <button
                       type="submit"
                       disabled={isProcessing}
-                      className="w-full py-4 px-6 rounded-xl font-bold text-lg text-white uppercase tracking-wider transition-all duration-300 hover:scale-105 active:scale-95 bg-linear-to-r from-blue-500 via-purple-500 to-pink-500 hover:shadow-2xl hover:shadow-purple-500/50 shadow-lg disabled:opacity-50"
+                      className="w-full py-4 px-6 rounded-full font-bold text-lg text-white uppercase tracking-wider transition-all duration-200 elevation-2 hover:bg-[var(--color-primary-600)] bg-[var(--color-primary-500)] disabled:opacity-50"
                     >
                       {isProcessing ? 'Linking GitHub...' : 'Link GitHub'}
                     </button>

@@ -1,6 +1,6 @@
-# Twin Agent 🤖
+# DOPPEL 🤖
 
-An advanced, AI-driven personal companion and scheduler designed to help you stay focused, organized, and accountable. By integrating directly with your developer profiles (GitHub, LeetCode) and understanding your academic syllabus, the Twin Agent acts as an intelligent accountability buddy that monitors your stress, sleep, and learning metrics perfectly.
+An advanced, AI-driven personal companion and scheduler designed to help you stay focused, organized, and accountable. By integrating directly with your developer profiles (GitHub, LeetCode) and understanding your academic syllabus, DOPPEL acts as an intelligent accountability buddy that monitors your stress, sleep, and learning metrics perfectly.
 
 ## 🚀 Features
 
@@ -8,7 +8,7 @@ An advanced, AI-driven personal companion and scheduler designed to help you sta
 - **AI-Driven Dynamic Scheduling:** Upload your course syllabus (text or PDF), set a deadline, and use the Google Gemini API to generate a personalized daily study timeline.
 - **Auto-Verification:** Automatically verify programming and repository tasks via GitHub and LeetCode API synchronizations. 
 - **Missed Task Adjustment:** The AI will seamlessly restructure your future schedule to account for any missed tasks or study blocks to ensure you still hit your syllabus deadlines.
-- **NLP Daily Check-ins:** Chat with your agent, provide a quick summary of your day ("I slept 8 hours and finished leetcode"), and let the server intelligently extract metrics to adjust your twin's state.
+- **NLP Daily Check-ins:** Chat with your agent, provide a quick summary of your day ("I slept 8 hours and finished leetcode"), and let the server intelligently extract metrics to adjust DOPPEL's state.
 
 ## 🏁 Getting Started
 

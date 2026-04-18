@@ -72,7 +72,7 @@ def ensure_guest_user():
 
 ensure_guest_user()
 
-app = FastAPI(title="Digital Twin Agent API")
+app = FastAPI(title="DOPPEL API")
 
 app.add_middleware(
     CORSMiddleware,
@@ -105,6 +105,10 @@ class SyllabusCreate(BaseModel):
     content: str
     deadline: str  # ISO format date string
 
+class ProfileUpdate(BaseModel):
+    name: str
+    university: str
+
 DEFAULT_TWIN_STATE = {
     "profile": {
         "name": "Guest Learner",
@@ -126,7 +130,7 @@ DEFAULT_TWIN_STATE = {
         "needs_intervention": False,
         "agent_message": "Welcome! Link GitHub or LeetCode to enable real commit and streak tracking.",
         "history": [
-            {"time": "09:00 AM", "action": "Welcome to your digital twin dashboard."}
+            {"time": "09:00 AM", "action": "Welcome to your DOPPEL dashboard."}
         ]
     },
     "schedule": [
@@ -267,6 +271,18 @@ def get_account_status(db: Session = Depends(get_db)):
         }
     }
 
+@app.post("/api/profile/update")
+def update_profile(data: ProfileUpdate, db: Session = Depends(get_db)):
+    GUEST_EMAIL = "guest@twinagent.local"
+    guest = db.query(User).filter(User.email == GUEST_EMAIL).first()
+    if not guest:
+        raise HTTPException(status_code=500, detail="Guest user not found")
+        
+    guest.name = data.name
+    guest.university = data.university
+    db.commit()
+    return {"message": "Profile updated successfully"}
+
 @app.get("/api/twin/state")
 def get_state(db: Session = Depends(get_db)):
     GUEST_EMAIL = "guest@twinagent.local"
@@ -278,6 +294,9 @@ def get_state(db: Session = Depends(get_db)):
     
     if not guest:
         return state
+        
+    state["profile"]["name"] = guest.name or "Guest Learner"
+    state["profile"]["university"] = guest.university or "Your Institution"
         
     metrics = db.query(DailyMetrics).filter(DailyMetrics.user_id == guest.id).order_by(DailyMetrics.date.desc()).first()
     if metrics:
@@ -368,9 +387,10 @@ def process_journal(data: JournalData, db: Session = Depends(get_db)):
         db.refresh(metrics)
 
     # Simulate extracting sleep data
-    sleep_match = re.search(r'slept.*?(\d+)|sleep.*?(\d+)', text)
+    sleep_match = re.search(r'slept\s+(?:for\s+)?(\d+(?:\.\d+)?)|(\d+(?:\.\d+)?)\s+hours?\s+(?:of\s+)?sleep|sleep.*?(\d+(?:\.\d+)?)|got\s+(?:only\s+)?(\d+(?:\.\d+)?)\s+hours?', text)
     if sleep_match:
-        hours = float(sleep_match.group(1) or sleep_match.group(2))
+        matched_str = next(g for g in sleep_match.groups() if g is not None)
+        hours = float(matched_str)
         metrics.sleep_deficit_hours = hours  # Now storing raw hours!
         if hours < 7:
             metrics.current_stress_score = min(10.0, metrics.current_stress_score + 1.5)
