@@ -409,7 +409,7 @@ function App() {
             </h2>
           </div>
           <p className={`text-xs font-semibold uppercase tracking-widest ${darkMode ? 'text-slate-500' : 'text-slate-400'}`}>
-            v1.0 • Review Build
+            v1.0 
           </p>
         </div>
 
