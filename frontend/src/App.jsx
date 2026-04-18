@@ -4,6 +4,14 @@ import axios from 'axios';
 // Dynamically target backend based on where it's deployed!
 axios.defaults.baseURL = import.meta.env.VITE_API_URL || 'http://localhost:8000';
 
+const ACCENT_COLORS = [
+  { name: 'Orange', main: '#FF8C00', dark: '#E65100' },
+  { name: 'Blue', main: '#3B82F6', dark: '#2563EB' },
+  { name: 'Emerald', main: '#10B981', dark: '#059669' },
+  { name: 'Violet', main: '#8B5CF6', dark: '#7C3AED' },
+  { name: 'Rose', main: '#F43F5E', dark: '#E11D48' }
+];
+
 function App() {
   const [twinData, setTwinData] = useState(null);
   const [accountStatus, setAccountStatus] = useState(null);
@@ -22,6 +30,16 @@ function App() {
   // Profile state
   const [profileName, setProfileName] = useState('');
   const [profileUniversity, setProfileUniversity] = useState('');
+
+  // Accent Color state
+  const [accentColor, setAccentColor] = useState(() => {
+    const saved = localStorage.getItem('doppel_accent');
+    return saved ? JSON.parse(saved) : ACCENT_COLORS[0];
+  });
+
+  useEffect(() => {
+    localStorage.setItem('doppel_accent', JSON.stringify(accentColor));
+  }, [accentColor]);
 
   // Syllabus state
   const [syllabi, setSyllabi] = useState([]);
@@ -326,9 +344,15 @@ function App() {
   };
 
   if (!twinData) return (
-    <div className={`flex items-center justify-center min-h-screen transition-colors duration-500 ${
-      darkMode ? 'bg-linear-to-br from-slate-900 via-slate-800 to-black' : 'bg-white'
-    }`}>
+    <div 
+      className={`flex items-center justify-center min-h-screen transition-colors duration-500 ${
+        darkMode ? 'bg-linear-to-br from-slate-900 via-slate-800 to-black' : 'bg-white'
+      }`}
+      style={{
+        '--color-primary-500': accentColor.main,
+        '--color-primary-600': accentColor.dark,
+      }}
+    >
       <div className="text-center space-y-4">
         <div className="text-6xl animate-bounce">⚙️</div>
         <div className={`text-3xl font-bold bg-linear-to-r ${
@@ -342,9 +366,15 @@ function App() {
   );
 
   return (
-    <div className={`flex h-screen overflow-hidden transition-colors duration-300 ${
-      darkMode ? 'bg-[var(--color-surface-dark)] text-slate-100' : 'bg-[var(--color-surface-light)] text-slate-900'
-    }`}>
+    <div 
+      className={`flex h-screen overflow-hidden transition-colors duration-300 ${
+        darkMode ? 'bg-[var(--color-surface-dark)] text-slate-100' : 'bg-[var(--color-surface-light)] text-slate-900'
+      }`}
+      style={{
+        '--color-primary-500': accentColor.main,
+        '--color-primary-600': accentColor.dark,
+      }}
+    >
       
       {/* MODERN SIDEBAR */}
       <div className={`w-72 flex flex-col z-10 transition-colors duration-300 ${
@@ -1152,6 +1182,35 @@ function App() {
                     </button>
                   </div>
                 </form>
+              </div>
+
+              {/* Appearance Settings */}
+              <div className={`col-span-1 lg:col-span-2 rounded-2xl border transition-all duration-300 elevation-1 ${
+                darkMode ? 'bg-slate-800 border-slate-700' : 'bg-white border-slate-200'
+              } p-10`}>
+                <div className="flex items-start justify-between gap-4 mb-6">
+                  <div>
+                    <h2 className={`text-2xl font-bold ${darkMode ? 'text-slate-100' : 'text-slate-800'}`}>
+                      Appearance
+                    </h2>
+                    <p className={`text-sm ${darkMode ? 'text-slate-400' : 'text-slate-500'}`}>
+                      Customize the accent color of your workspace.
+                    </p>
+                  </div>
+                </div>
+                <div className="flex flex-wrap gap-4">
+                  {ACCENT_COLORS.map(color => (
+                    <button
+                      key={color.name}
+                      onClick={() => setAccentColor(color)}
+                      className={`w-12 h-12 rounded-full elevation-2 transition-transform hover:scale-110 ${
+                        accentColor.name === color.name ? (darkMode ? 'ring-4 ring-white border-2 border-slate-800' : 'ring-4 ring-slate-800 border-2 border-white') : ''
+                      }`}
+                      style={{ backgroundColor: color.main }}
+                      title={color.name}
+                    />
+                  ))}
+                </div>
               </div>
 
               {/* GitHub Connection */}
