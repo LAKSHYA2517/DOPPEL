@@ -22,5 +22,8 @@ Need Python 3.10+ and Node.js v18+.
 2. Start the Frontend React App (see `frontend/README.md`)
 3. Connect your API Integrations on the Settings tab.
 
+### Maintainer Note
+Last verified setup flow: 2026-04-18.
+
 ## 🔐 Privacy
 Your `twin_agent.db` and environment keys (`.env`) are fully separated and ignored from version control to prevent any personal scheduling constraints or repository secrets from leaking.
