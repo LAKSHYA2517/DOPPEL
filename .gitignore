@@ -5,6 +5,7 @@ __pycache__/
 venv/
 .venv/
 env/
+# Keep local and scoped environment files out of version control.
 .env
 .env.*
 *.db
