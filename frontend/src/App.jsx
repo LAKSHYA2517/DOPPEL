@@ -63,6 +63,7 @@ function App() {
     fetchAccountStatus();
     fetchSyllabi();
     fetchSchedule();
+    // Lightweight polling keeps account connection badges fresh in the UI.
     const interval = setInterval(fetchAccountStatus, 5000);
     return () => clearInterval(interval);
   }, []);
