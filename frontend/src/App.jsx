@@ -324,7 +324,7 @@ function App() {
 
   const handleVerifyTasks = async () => {
     setIsProcessing(true);
-    setMessage('⏳ Verifying tasks via LeetCode & GitHub APIs...');
+    setMessage(' Verifying tasks via LeetCode & GitHub APIs...');
     try {
       const res = await axios.post('/api/schedule/verify', {}, { timeout: 30000 });
       setMessage(`✓ ${res.data.message}`);
@@ -642,7 +642,7 @@ function App() {
                   disabled={isGenerating}
                   className="px-6 py-3 rounded-full font-bold text-white transition-all duration-200 elevation-2 hover:bg-[var(--color-primary-600)] bg-[var(--color-primary-500)] disabled:opacity-50"
                 >
-                  {isGenerating ? '⏳ Generating...' : '🤖 Generate Schedule with AI'}
+                  {isGenerating ? ' Generating...' : ' Generate Schedule with AI'}
                 </button>
                 <button
                   onClick={handleVerifyTasks}
@@ -653,7 +653,7 @@ function App() {
                       : 'bg-slate-200 text-slate-700 hover:bg-slate-300'
                   } disabled:opacity-50`}
                 >
-                  ✓ Verify Tasks
+                   Verify Tasks
                 </button>
                 <button
                   onClick={handleAdjustSchedule}
@@ -664,7 +664,7 @@ function App() {
                       : 'bg-yellow-100 text-yellow-700 hover:bg-yellow-200'
                   } disabled:opacity-50`}
                 >
-                  🔄 Adjust for Missed Tasks
+                   Adjust for Missed Tasks
                 </button>
               </div>
 
@@ -689,10 +689,10 @@ function App() {
                 </div>
                 <div className="grid grid-cols-4 gap-3">
                   {[
-                    { value: 'auto', label: '🤖 Auto', activeClass: 'bg-[var(--color-primary-500)] text-white elevation-2' },
-                    { value: 'easy', label: '🌿 Easy', activeClass: 'bg-green-500 text-white elevation-2' },
-                    { value: 'medium', label: '⚡ Medium', activeClass: 'bg-orange-500 text-white elevation-2' },
-                    { value: 'hard', label: '🔥 Hard', activeClass: 'bg-red-500 text-white elevation-2' },
+                    { value: 'auto', label: ' Auto', activeClass: 'bg-[var(--color-primary-500)] text-white elevation-2' },
+                    { value: 'easy', label: ' Easy', activeClass: 'bg-green-500 text-white elevation-2' },
+                    { value: 'medium', label: ' Medium', activeClass: 'bg-orange-500 text-white elevation-2' },
+                    { value: 'hard', label: ' Hard', activeClass: 'bg-red-500 text-white elevation-2' },
                   ].map(opt => (
                     <button
                       key={opt.value}
