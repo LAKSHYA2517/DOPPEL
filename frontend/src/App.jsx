@@ -896,7 +896,7 @@ function App() {
             <div className="grid grid-cols-1 lg:grid-cols-3 gap-8 w-full animate-in fade-in slide-in-from-bottom-4 duration-500">
               
               {/* Method 1: API Sync */}
-              <div className={`rounded-2xl border transition-all duration-300 elevation-1 ${
+              <div className={`rounded-2xl border transition-all duration-300 elevation-1 flex flex-col ${
                 darkMode ? 'bg-slate-800 border-slate-700' : 'bg-white border-slate-200'
               } p-10`}>
                 <h2 className={`text-2xl font-bold mb-3 flex items-center gap-3 ${
@@ -930,7 +930,7 @@ function App() {
                 <button 
                   onClick={handleApiSync}
                   disabled={isProcessing}
-                  className="w-full py-4 px-6 rounded-full font-bold text-lg text-white uppercase tracking-wider transition-all duration-200 elevation-2 hover:bg-[var(--color-primary-600)] bg-[var(--color-primary-500)] disabled:opacity-50"
+                  className="w-full mt-auto py-4 px-6 rounded-full font-bold text-lg text-white uppercase tracking-wider transition-all duration-200 elevation-2 hover:bg-[var(--color-primary-600)] bg-[var(--color-primary-500)] disabled:opacity-50"
                 >
                   {isProcessing ? 'Fetching APIs...' : ' Fetch'}
                 </button>
